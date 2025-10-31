@@ -1,0 +1,18 @@
+{ 
+  "name": "api-gateway", 
+  "version": "1.0.0", 
+  "description": "API Gateway for SmartGym", 
+  "main": "src/app.js", 
+  "scripts": { 
+    "start": "node src/app.js", 
+    "dev": "nodemon src/app.js" 
+  }, 
+  "dependencies": { 
+    "express": "^4.18.2", 
+    "http-proxy-middleware": "^2.0.6", 
+    "cors": "^2.8.5" 
+  }, 
+  "devDependencies": { 
+    "nodemon": "^3.0.1" 
+  } 
+} 

@@ -1,1 +1,69 @@
-.
+version: '3.8' 
+ 
+services: 
+ 
+  auth-db: 
+    image: postgres:13 
+    environment: 
+      POSTGRES_DB: auth_db 
+      POSTGRES_USER: admin 
+      POSTGRES_PASSWORD: password 
+    volumes: 
+      - auth_data:/var/lib/postgresql/data 
+ 
+  gym-db: 
+    image: postgres:13 
+    environment: 
+      POSTGRES_DB: gym_db 
+      POSTGRES_USER: admin 
+      POSTGRES_PASSWORD: password 
+    volumes: 
+      - gym_data:/var/lib/postgresql/data 
+ 
+  training-db: 
+    image: mongo:5 
+    environment: 
+      MONGO_INITDB_ROOT_USERNAME: admin 
+      MONGO_INITDB_ROOT_PASSWORD: password 
+    volumes: 
+      - training_data:/data/db 
+ 
+  auth-service: 
+    build: ./auth-service 
+    ports: 
+      - "3001:3001" 
+    depends_on: 
+      - auth-db 
+ 
+  gym-service: 
+    build: ./gym-service 
+    ports: 
+      - "3002:3002" 
+    depends_on: 
+      - gym-db 
+ 
+  training-service: 
+    build: ./training-service 
+    ports: 
+      - "5000:5000" 
+    depends_on: 
+      - training-db 
+ 
+  api-gateway: 
+    build: ./api-gateway 
+    ports: 
+      - "3000:3000" 
+    depends_on: 
+      - auth-service 
+      - gym-service 
+      - training-service 
+ 
+  frontend: 
+    build: ./frontend 
+    ports: 
+      - "8080:80" 
+ 
+volumes: 
+  auth_data: 
+  gym_data: 
+  training_data: 
