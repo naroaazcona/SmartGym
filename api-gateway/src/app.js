@@ -7,7 +7,7 @@ const app = express();
 app.use(cors()); 
 app.use(express.json()); 
  
-// Configuraci¢n de proxies para los microservicios 
+// Configuraciï¿½n de proxies para los microservicios 
 app.use('/auth', createProxyMiddleware({ 
   target: 'http://auth-service:3001', 
   changeOrigin: true, 
@@ -33,10 +33,10 @@ app.use('/training', createProxyMiddleware({
 })); 
  
 // Ruta de health check 
-app.get('/health', (req, res) =
-  res.status(200).json({ message: 'API Gateway is running!' }); 
-}); 
- 
-app.listen(PORT, () =
-  console.log('API Gateway listening on port ' + PORT); 
+app.get('/health', (req, res) => {
+  res.status(200).json({ message: 'API Gateway is running!' });
+});
+
+app.listen(PORT, () => {
+  console.log('API Gateway listening on port ' + PORT);
 }); 
