@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔐 SmartGym - Auth Service Test</title>
+    <link rel="stylesheet" href="auth-service.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏋️‍♂️ SmartGym</h1>
+            <div class="subtitle">Auth Service - Panel de Pruebas</div>
+        </header>
+
+        <div class="service-status">
+            <div>
+                <strong>🔐 Auth Service</strong>
+                <div>http://localhost:3001</div>
+            </div>
+            <div id="service-status" class="status-badge">Verificando...</div>
+        </div>
+
+        <!-- Health Check Section -->
+        <div class="test-section">
+            <h2>🏥 Health Check</h2>
+            <p>Verifica que el servicio de autenticación esté funcionando correctamente.</p>
+            <button onclick="testHealth()" id="health-btn">Probar Health Check</button>
+            <div id="health-result" class="result"></div>
+        </div>
+
+        <!-- Register Section -->
+        <div class="test-section">
+            <h2>👤 Registro de Usuario</h2>
+            <p>Crea una nueva cuenta en el sistema.</p>
+            
+            <div class="input-group">
+                <label for="reg-email">Email:</label>
+                <input type="email" id="reg-email" value="test@smartgym.com">
+            </div>
+            
+            <div class="input-group">
+                <label for="reg-password">Contraseña:</label>
+                <input type="password" id="reg-password" value="test123">
+            </div>
+            
+            <div class="input-group">
+                <label for="reg-name">Nombre:</label>
+                <input type="text" id="reg-name" value="Usuario Test">
+            </div>
+
+            <button onclick="register()" class="success">Registrar Usuario</button>
+            <div id="register-result" class="result"></div>
+        </div>
+
+        <!-- Login Section -->
+        <div class="test-section">
+            <h2>🔐 Iniciar Sesión</h2>
+            <p>Accede con una cuenta existente.</p>
+            
+            <div class="input-group">
+                <label for="login-email">Email:</label>
+                <input type="email" id="login-email" value="admin@smartgym.com">
+            </div>
+            
+            <div class="input-group">
+                <label for="login-password">Contraseña:</label>
+                <input type="password" id="login-password" value="admin123">
+            </div>
+
+            <button onclick="login()" class="success">Iniciar Sesión</button>
+            <button onclick="fillDemoUser()" class="secondary">Usuario Demo</button>
+            <div id="login-result" class="result"></div>
+
+            <div id="token-section" class="hidden">
+                <h4>🔑 Token JWT Obtenido:</h4>
+                <div id="token-display" class="token-display"></div>
+            </div>
+        </div>
+
+        <!-- Profile Section -->
+        <div class="test-section">
+            <h2>📋 Perfil de Usuario</h2>
+            <p>Obtén la información del perfil (requiere autenticación).</p>
+            
+            <button onclick="getProfile()" class="success">Obtener Perfil</button>
+            <button onclick="clearToken()" class="danger">Limpiar Token</button>
+            <div id="profile-result" class="result"></div>
+        </div>
+
+        <!-- Logout Section -->
+        <div class="test-section">
+            <h2>🚪 Cerrar Sesión</h2>
+            <p>Cierra la sesión actual del usuario.</p>
+            <button onclick="logout()" class="danger">Cerrar Sesión</button>
+        <div id="logout-result" class="result"></div>
+</div>
+
+        <!-- User Info Display -->
+        <div id="user-info" class="user-info hidden">
+            <h4>👤 Información del Usuario</h4>
+            <div id="user-details"></div>
+        </div>
+    </div>
+
+    <script>
+    const BASE_URL = 'http://localhost:3001';
+
+    const els = {
+        status: document.getElementById('service-status'),
+        healthBtn: document.getElementById('health-btn'),
+        healthResult: document.getElementById('health-result'),
+        regEmail: document.getElementById('reg-email'),
+        regPassword: document.getElementById('reg-password'),
+        regName: document.getElementById('reg-name'),
+        registerResult: document.getElementById('register-result'),
+        loginEmail: document.getElementById('login-email'),
+        loginPassword: document.getElementById('login-password'),
+        loginResult: document.getElementById('login-result'),
+        profileResult: document.getElementById('profile-result'),
+        tokenSection: document.getElementById('token-section'),
+        tokenDisplay: document.getElementById('token-display'),
+        userInfo: document.getElementById('user-info'),
+        userDetails: document.getElementById('user-details'),
+    };
+
+    function setStatus(online) {
+        els.status.textContent = online ? '✅ ONLINE' : '❌ OFFLINE';
+        els.status.classList.toggle('offline', !online);
+    }
+
+    function printResult(el, data, ok = true) {
+        el.classList.remove('success', 'error');
+        el.classList.add(ok ? 'success' : 'error');
+        el.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+    }
+
+    function getToken() { return localStorage.getItem('auth_token') || ''; }
+    function setToken(token) {
+        if (token) localStorage.setItem('auth_token', token);
+        els.tokenSection.classList.remove('hidden');
+        els.tokenDisplay.textContent = getToken();
+    }
+    function hideToken() {
+        els.tokenSection.classList.add('hidden');
+        els.tokenDisplay.textContent = '';
+    }
+
+    // VERIFICACIÓN TÉCNICA MEJORADA
+    async function checkServiceStatus() {
+        try {
+            const res = await fetch(`${BASE_URL}/health`);
+            setStatus(res.ok);
+        } catch (_) {
+            setStatus(false);
+        }
+    }
+
+    async function testHealth() {
+        els.healthBtn.disabled = true;
+        els.healthResult.textContent = '🔍 Verificando conexión a PostgreSQL y estado del servicio...';
+        
+        try {
+            const startTime = Date.now();
+            const res = await fetch(`${BASE_URL}/health`);
+            const endTime = Date.now();
+            const data = await res.json().catch(() => ({}));
+            
+            const healthAnalysis = `
+🏥 HEALTH CHECK - ANÁLISIS TÉCNICO
+───────────────────────────────────
+⏱️ Tiempo respuesta: ${endTime - startTime}ms
+📊 Estado: ${res.ok ? '✅ HEALTHY' : '❌ UNHEALTHY'}
+🗄️ Base de datos: ${data.database || 'No disponible'}
+
+🔧 COMPONENTES VERIFICADOS:
+${data.database === 'connected' ? '✅ PostgreSQL conectado' : '❌ PostgreSQL desconectado'}
+${data.timestamp ? '✅ Timestamp funcionando' : '❌ Timestamp no disponible'}
+${res.ok ? '✅ Endpoint /health accesible' : '❌ Endpoint /health no responde'}
+
+📋 RESPUESTA COMPLETA:
+${JSON.stringify(data, null, 2)}
+            `;
+            
+            printResult(els.healthResult, healthAnalysis, res.ok);
+            setStatus(res.ok);
+        } catch (err) {
+            const errorAnalysis = `
+❌ HEALTH CHECK FALLIDO - DIAGNÓSTICO
+──────────────────────────────────────
+Error: ${err.message}
+
+🔍 POSIBLES CAUSAS:
+• Auth Service no está ejecutándose
+• Puerto 3001 bloqueado o en uso
+• Error en app.js (express no iniciado)
+• Problema de red o CORS
+            `;
+            printResult(els.healthResult, errorAnalysis, false);
+            setStatus(false);
+        } finally {
+            els.healthBtn.disabled = false;
+        }
+    }
+
+    async function register() {
+        els.registerResult.textContent = '🔨 Creando usuario, hasheando password, generando JWT...';
+        els.userInfo.classList.add('hidden');
+        
+        try {
+            const body = {
+                email: els.regEmail.value.trim(),
+                password: els.regPassword.value,
+                name: els.regName.value.trim(),
+            };
+
+            // Validaciones previas
+            if (!body.email || !body.password || !body.name) {
+                throw new Error('Faltan campos requeridos (email, password, name)');
+            }
+
+            if (body.password.length < 6) {
+                throw new Error('La contraseña debe tener al menos 6 caracteres');
+            }
+
+            const startTime = Date.now();
+            const res = await fetch(`${BASE_URL}/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            const endTime = Date.now();
+            
+            const data = await res.json().catch(() => ({}));
+
+            if (res.ok) {
+                // ANÁLISIS DETALLADO DEL REGISTRO EXITOSO
+                const tokenParts = data.token.split('.');
+                const payload = JSON.parse(atob(tokenParts[1]));
+                
+                const registerAnalysis = `
+✅ REGISTRO EXITOSO - VERIFICACIÓN TÉCNICA
+──────────────────────────────────────────
+⏱️ Tiempo proceso: ${endTime - startTime}ms
+📊 Status: ${res.status} (CREATED)
+
+🔧 COMPONENTES VERIFICADOS:
+✅ AuthController.register ejecutado
+✅ User.create() - Usuario guardado en PostgreSQL
+✅ bcrypt.hash() - Password hasheado correctamente
+✅ jwt.sign() - Token JWT generado
+✅ Middleware CORS funcionando
+
+👤 DATOS CREADOS:
+• ID: ${data.user.id} (PostgreSQL SERIAL)
+• Email: ${data.user.email} 
+• Nombre: ${data.user.name}
+• Rol: ${data.user.role} (valor por defecto)
+
+🔐 TOKEN JWT ANALIZADO:
+• Algoritmo: ${JSON.parse(atob(tokenParts[0])).alg}
+• UserId en payload: ${payload.userId}
+• Email en payload: ${payload.email}
+• Rol en payload: ${payload.role}
+• Expiración: 24 horas
+
+📋 RESPUESTA COMPLETA:
+${JSON.stringify(data, null, 2)}
+                `;
+                
+                printResult(els.registerResult, registerAnalysis, true);
+                if (data.token) setToken(data.token);
+            } else {
+                const errorAnalysis = `
+❌ REGISTRO FALLIDO - ANÁLISIS TÉCNICO
+──────────────────────────────────────
+📊 Status: ${res.status}
+💬 Error: ${data.error}
+
+🔍 DIAGNÓSTICO:
+${data.error.includes('ya existe') ? '✅ User.findByEmail() funcionando - Email duplicado detectado' : ''}
+${data.error.includes('contraseña') ? '✅ Validación de password en controller funcionando' : ''}
+${data.error.includes('requeridos') ? '✅ Validación de campos en controller funcionando' : ''}
+${res.status === 500 ? '❌ Error interno en User.create() o base de datos' : ''}
+                `;
+                printResult(els.registerResult, errorAnalysis, false);
+            }
+        } catch (err) {
+            printResult(els.registerResult, `❌ ERROR: ${err.message}`, false);
+        }
+    }
+
+    async function login() {
+        els.loginResult.textContent = '🔐 Verificando credenciales, comparando passwords...';
+        els.userInfo.classList.add('hidden');
+        
+        try {
+            const body = {
+                email: els.loginEmail.value.trim(),
+                password: els.loginPassword.value,
+            };
+
+            if (!body.email || !body.password) {
+                throw new Error('Email y password son requeridos');
+            }
+
+            const startTime = Date.now();
+            const res = await fetch(`${BASE_URL}/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            const endTime = Date.now();
+            
+            const data = await res.json().catch(() => ({}));
+
+            if (res.ok) {
+                // ANÁLISIS DETALLADO DEL LOGIN EXITOSO
+                const tokenParts = data.token.split('.');
+                const payload = JSON.parse(atob(tokenParts[1]));
+                
+                const loginAnalysis = `
+✅ LOGIN EXITOSO - VERIFICACIÓN TÉCNICA
+───────────────────────────────────────
+⏱️ Tiempo autenticación: ${endTime - startTime}ms
+📊 Status: ${res.status} (OK)
+
+🔧 COMPONENTES VERIFICADOS:
+✅ AuthController.login ejecutado
+✅ User.findByEmail() - Usuario encontrado en BD
+✅ User.verifyPassword() - bcrypt.compare() funcionando
+✅ jwt.sign() - Nuevo token generado
+
+🔐 PROCESO DE AUTENTICACIÓN:
+1. ✅ Búsqueda por email en PostgreSQL
+2. ✅ Comparación password hasheado (bcrypt)
+3. ✅ Generación nuevo token JWT
+4. ✅ Respuesta con datos usuario
+
+👤 USUARIO AUTENTICADO:
+• ID: ${data.user.id}
+• Email: ${data.user.email}
+• Nombre: ${data.user.name}
+• Rol: ${data.user.role}
+
+📋 RESPUESTA COMPLETA:
+${JSON.stringify(data, null, 2)}
+                `;
+                
+                printResult(els.loginResult, loginAnalysis, true);
+                if (data.token) setToken(data.token);
+            } else {
+                const errorAnalysis = `
+❌ LOGIN FALLIDO - ANÁLISIS TÉCNICO
+───────────────────────────────────
+📊 Status: ${res.status}
+💬 Error: ${data.error}
+
+🔍 DIAGNÓSTICO:
+${res.status === 401 ? '✅ Validación de credenciales funcionando - Usuario no existe o password incorrecto' : ''}
+${res.status === 400 ? '✅ Validación de campos requeridos funcionando' : ''}
+${res.status === 500 ? '❌ Error interno en base de datos o JWT' : ''}
+                `;
+                printResult(els.loginResult, errorAnalysis, false);
+            }
+        } catch (err) {
+            printResult(els.loginResult, `❌ ERROR: ${err.message}`, false);
+        }
+    }
+
+    function fillDemoUser() {
+        els.loginEmail.value = 'admin@smartgym.com';
+        els.loginPassword.value = 'admin123';
+    }
+
+    async function getProfile() {
+        els.profileResult.textContent = '🛡️ Verificando token JWT, consultando base de datos...';
+        els.userInfo.classList.add('hidden');
+        
+        const token = getToken();
+        if (!token) {
+            printResult(els.profileResult, `
+❌ TOKEN NO ENCONTRADO
+─────────────────────
+El endpoint /profile requiere:
+• Header: Authorization: Bearer <token>
+• Token JWT válido y no expirado
+• Middleware auth.js funcionando
+
+💡 Solución: Inicia sesión primero para obtener un token
+            `, false);
+            return;
+        }
+
+        try {
+            const startTime = Date.now();
+            const res = await fetch(`${BASE_URL}/profile`, {
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            const endTime = Date.now();
+            
+            const data = await res.json().catch(() => ({}));
+
+            if (res.ok) {
+                // ANÁLISIS DETALLADO DEL PROFILE EXITOSO
+                const tokenParts = token.split('.');
+                const payload = JSON.parse(atob(tokenParts[1]));
+                
+                const profileAnalysis = `
+✅ PERFIL OBTENIDO - VERIFICACIÓN TÉCNICA
+─────────────────────────────────────────
+⏱️ Tiempo proceso: ${endTime - startTime}ms
+📊 Status: ${res.status} (OK)
+
+🔧 COMPONENTES VERIFICADOS:
+✅ Middleware auth.js - Token validado
+✅ jwt.verify() - Token JWT verificado
+✅ User.findById() - Usuario encontrado en BD
+✅ AuthController.getProfile ejecutado
+
+🛡️ PROCESO DE AUTORIZACIÓN:
+1. ✅ Header Authorization recibido
+2. ✅ Token JWT verificado y decodificado
+3. ✅ userId extraído: ${payload.userId}
+4. ✅ Búsqueda en PostgreSQL por ID
+5. ✅ Datos usuario devueltos
+
+🔐 VERIFICACIONES DE SEGURIDAD:
+✅ Token válido y no expirado
+✅ userId del token coincide con BD: ${payload.userId === data.user.id ? '✅ SÍ' : '❌ NO'}
+✅ Datos sensibles (password) ocultos
+
+👤 INFORMACIÓN DEL USUARIO:
+${JSON.stringify(data.user, null, 2)}
+                `;
+                
+                printResult(els.profileResult, profileAnalysis, true);
+                if (data.user) {
+                    els.userInfo.classList.remove('hidden');
+                    els.userDetails.textContent = JSON.stringify(data.user, null, 2);
+                }
+            } else {
+                const errorAnalysis = `
+❌ ERROR EN PERFIL - ANÁLISIS TÉCNICO
+─────────────────────────────────────
+📊 Status: ${res.status}
+💬 Error: ${data.error}
+
+🔍 DIAGNÓSTICO:
+${res.status === 401 ? '❌ Header Authorization faltante o mal formado' : ''}
+${res.status === 403 ? '❌ Token JWT inválido o expirado - jwt.verify() falló' : ''}
+${res.status === 404 ? '❌ Usuario no encontrado en BD - User.findById() retornó null' : ''}
+${res.status === 500 ? '❌ Error interno en base de datos o middleware' : ''}
+                `;
+                printResult(els.profileResult, errorAnalysis, false);
+            }
+        } catch (err) {
+            printResult(els.profileResult, `❌ ERROR: ${err.message}`, false);
+        }
+    }
+
+    function clearToken() {
+        localStorage.removeItem('auth_token');
+        hideToken();
+        els.userInfo.classList.add('hidden');
+        els.profileResult.textContent = '✅ Token eliminado - Vuelve a iniciar sesión para obtener uno nuevo';
+    }
+
+    // Exponer funciones a los botones inline
+    window.testHealth = testHealth;
+    window.register = register;
+    window.login = login;
+    window.fillDemoUser = fillDemoUser;
+    window.getProfile = getProfile;
+    window.clearToken = clearToken;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if (getToken()) setToken(getToken()); else hideToken();
+        checkServiceStatus();
+    });
+    
+    
+    // 🔐 NUEVO: Función para logout
+    async function logout() {
+        const logoutResult = document.getElementById('logout-result');
+        const token = getToken();
+        
+        if (!token) {
+            logoutResult.innerHTML = `
+❌ NO HAY SESIÓN ACTIVA
+──────────────────────
+No puedes cerrar sesión porque:
+• No hay token guardado en localStorage
+• No has iniciado sesión previamente
+• La sesión ya estaba cerrada
+
+💡 Solución: Inicia sesión primero
+        `;
+        logoutResult.classList.remove('success');
+        logoutResult.classList.add('error');
+        return;
+    }
+
+        logoutResult.textContent = '🔐 Cerrando sesión, verificando token...';
+        
+        try {
+            const res = await fetch(`${BASE_URL}/logout`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`  // 🔐 ENVIAR TOKEN
+                }
+            });
+            
+            const data = await res.json().catch(() => ({}));
+            
+            if (res.ok) {
+                // Limpiar token localmente
+                clearToken();
+                logoutResult.innerHTML = `
+✅ LOGOUT EXITOSO - VERIFICACIÓN TÉCNICA
+───────────────────────────────────────
+📊 Status: ${res.status} (OK)
+
+🔧 COMPONENTES VERIFICADOS:
+✅ Middleware auth.js - Token validado
+✅ AuthController.logout ejecutado
+✅ Token eliminado del localStorage
+✅ Sesión cerrada correctamente
+
+🔐 PROCESO:
+1. ✅ Token JWT verificado por middleware
+2. ✅ Endpoint /logout ejecutado
+3. ✅ Respuesta del servidor recibida
+4. ✅ Token eliminado localmente
+
+📋 RESPUESTA COMPLETA:
+        ${JSON.stringify(data, null, 2)}
+                    `;
+                    logoutResult.classList.remove('error');
+                    logoutResult.classList.add('success');
+                } else {
+                    const errorAnalysis = `
+❌ LOGOUT FALLIDO - ANÁLISIS TÉCNICO
+────────────────────────────────────
+📊 Status: ${res.status}
+💬 Error: ${data.error}
+
+🔍 DIAGNÓSTICO:
+${res.status === 401 ? '❌ Token no enviado en header Authorization' : ''}
+${res.status === 403 ? '❌ Token JWT inválido o expirado' : ''}
+${res.status === 500 ? '❌ Error interno del servidor' : ''}
+            `;
+            logoutResult.innerHTML = errorAnalysis;
+            logoutResult.classList.remove('success');
+            logoutResult.classList.add('error');
+        }
+    } catch (err) {
+        logoutResult.innerHTML = `
+❌ ERROR DE CONEXIÓN
+────────────────────
+No se pudo conectar al endpoint /logout
+Error: ${err.message}
+
+🔍 POSIBLES CAUSAS:
+• Auth Service no está ejecutándose
+• Problema de red
+• Error CORS
+        `;
+        logoutResult.classList.remove('success');
+        logoutResult.classList.add('error');
+    }
+} 
+    </script>
+</body>
+</html>

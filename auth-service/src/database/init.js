@@ -2,7 +2,7 @@ const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
 
-console.log('📦 Iniciando inicialización de la base de datos...');
+console.log('Iniciando inicialización de la base de datos...');
 
 const pool = new Pool({
   user: 'admin',

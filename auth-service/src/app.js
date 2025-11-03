@@ -10,10 +10,13 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
+//Publicas
 app.post('/register', AuthController.register);
 app.post('/login', AuthController.login);
 
+//Protegidas
 app.get('/profile', authenticateToken, AuthController.getProfile);
+app.post('/logout', authenticateToken, AuthController.logout); 
 
 // Endpoint de health para verificar el estado del servicio
 app.get('/health', async (req, res) => {

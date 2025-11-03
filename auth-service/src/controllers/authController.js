@@ -135,6 +135,20 @@ class AuthController {
             });
         }
     }
+
+    static async logout(req, res) {
+        try {
+            res.json({
+                message: 'Logout exitoso',
+                timestamp: new Date().toISOString()
+            });
+        } catch (error) {
+            console.error('Error en logout:', error);
+            res.status(500).json({ 
+                error: 'Error interno del servidor' 
+            });
+        }
+    }
 }
 
 module.exports = AuthController;
