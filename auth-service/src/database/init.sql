@@ -22,29 +22,29 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token);
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 
--- Insertar usuario administrador por defecto (password: 'admin123')
+-- Insertar usuario administrador por defecto (password: 'admin123') pero hasheado
 INSERT INTO users (email, password, name, role) 
 VALUES (
     'admin@smartgym.com', 
-    'admin1234', 
+    '$2a$10$Bj/owbz5If5wqQFvIOI0EOdnI6QvnqaVleOrYaM9A.vDsbYk2uBZ6', 
     'Administrador SmartGym', 
     'admin'
 ) ON CONFLICT (email) DO NOTHING;
 
--- Insertar usuario miembro de prueba (password: 'user123')
+-- Insertar usuario miembro de prueba (password: 'user123') pero hasheado
 INSERT INTO users (email, password, name, role) 
 VALUES (
     'usuario@smartgym.com', 
-    'usuario1234', 
+    '$2a$10$mt2qPRZFpQi1SfiHzW90OuGTN41vAxgKLXTIHcmrCcQYK99nPvT9W', 
     'Usuario Demo', 
     'member'
 ) ON CONFLICT (email) DO NOTHING;
 
--- Insertar entrenador de prueba (password: 'trainer123')
+-- Insertar entrenador de prueba (password: 'trainer123') pero hasheado
 INSERT INTO users (email, password, name, role) 
 VALUES (
     'entrenador@smartgym.com', 
-    'entrenador1234', 
+    '$2a$10$K3O0K2RSEYt1E/yqUyBFXODk0UEKKHreiPSmVn0QrzoSObJD.9X4i', 
     'Entrenador Profesional', 
     'trainer'
 ) ON CONFLICT (email) DO NOTHING;
