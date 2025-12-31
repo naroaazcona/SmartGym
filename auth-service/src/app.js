@@ -17,6 +17,8 @@ app.post('/login', AuthController.login);
 //Protegidas
 app.get('/profile', authenticateToken, AuthController.getProfile);
 app.post('/logout', authenticateToken, AuthController.logout); 
+app.put('/profile', authenticateToken, AuthController.updateProfile);
+
 
 // Endpoint de health para verificar el estado del servicio
 app.get('/health', async (req, res) => {

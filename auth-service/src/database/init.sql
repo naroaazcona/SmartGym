@@ -8,6 +8,22 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Tabla de perfiles de usuario (1-a-1 con users)
+CREATE TABLE IF NOT EXISTS user_profiles (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(120) NOT NULL,
+    phone VARCHAR(30),
+    birth_date DATE,
+    gender VARCHAR(30),
+    height_cm INTEGER,
+    weight_kg NUMERIC(5,2),
+    experience_level VARCHAR(30) DEFAULT 'beginner',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
 -- Tabla de sesiones (para logout y gestión de tokens)
 CREATE TABLE IF NOT EXISTS sessions (
     id SERIAL PRIMARY KEY,
@@ -21,6 +37,7 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token);
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_profiles_user_id ON user_profiles(user_id);
 
 -- Insertar usuario administrador por defecto (password: 'admin123') pero hasheado
 INSERT INTO users (email, password, name, role) 

@@ -7,11 +7,12 @@ const JWT_EXPIRES_IN = '24h';
 class AuthController {
     static async register(req, res) {
         try {
-            const { email, password, name, role = 'member' } = req.body;
+            const { email, password, firstName, lastName, phone, birthDate,
+                gender, heightCm, weightKg, experienceLevel, role = 'member' } = req.body;
 
-            if (!email || !password || !name) {
+            if (!email || !password || !firstName || !lastName) {
                 return res.status(400).json({ 
-                    error: 'Email, password y name son requeridos' 
+                    error: 'Email, password, firstName y lastName son requeridos' 
                 });
             }
 
@@ -21,8 +22,27 @@ class AuthController {
                 });
             }
 
-            // Crear usuario
+            if (role !== 'member') {
+                return res.status(403).json({
+                error: 'No está permitido registrarse con ese rol'
+                });
+            }
+
+            const name = `${firstName} ${lastName}`.trim();
+            //Crear usuario (igual que antes)
             const user = await User.create({ email, password, name, role });
+
+            //Crear perfil
+            await User.createProfile(user.id, {
+                firstName,
+                lastName,
+                phone,
+                birthDate,
+                gender,
+                heightCm,
+                weightKg,
+                experienceLevel
+            });
             
             // Generar token JWT
             const token = jwt.sign(
@@ -41,7 +61,17 @@ class AuthController {
                     id: user.id,
                     email: user.email,
                     name: user.name,
-                    role: user.role
+                    role: user.role,
+                    profile: {
+                        firstName,
+                        lastName,
+                        phone: phone || null,
+                        birthDate: birthDate || null,
+                        gender: gender || null,
+                        heightCm: heightCm ?? null,
+                        weightKg: weightKg ?? null,
+                        experienceLevel: experienceLevel || 'beginner'
+                    }
                 },
                 token
             });
@@ -127,7 +157,26 @@ class AuthController {
                 });
             }
 
-            res.json({ user });
+            res.json({
+            message: 'Perfil obtenido exitosamente',
+            user: {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                role: user.role,
+                created_at: user.created_at,
+                profile: user.first_name ? {
+                    firstName: user.first_name,
+                    lastName: user.last_name,
+                    phone: user.phone,
+                    birthDate: user.birth_date,
+                    gender: user.gender,
+                    heightCm: user.height_cm,
+                    weightKg: user.weight_kg,
+                    experienceLevel: user.experience_level
+                } : null
+            }
+        });
         } catch (error) {
             console.error('Error obteniendo perfil:', error);
             res.status(500).json({ 
@@ -149,6 +198,63 @@ class AuthController {
             });
         }
     }
+
+    static async updateProfile(req, res) {
+        try {
+            const {
+                firstName,
+                lastName,
+                phone,
+                birthDate,
+                gender,
+                heightCm,
+                weightKg,
+                experienceLevel
+            } = req.body;
+
+            // Opcional: validaciones mínimas (no obligatorias)
+            if (firstName !== undefined && String(firstName).trim() === '') {
+                return res.status(400).json({ error: 'firstName no puede estar vacío' });
+            }
+            if (lastName !== undefined && String(lastName).trim() === '') {
+                return res.status(400).json({ error: 'lastName no puede estar vacío' });
+            }
+
+            const updated = await User.updateProfile(req.userId, {
+                firstName,
+                lastName,
+                phone,
+                birthDate,
+                gender,
+                heightCm,
+                weightKg,
+                experienceLevel
+            });
+
+            if (!updated) {
+                return res.status(404).json({ error: 'Perfil no encontrado' });
+            }
+
+            res.json({
+                message: 'Perfil actualizado exitosamente',
+                profile: {
+                    userId: updated.user_id,
+                    firstName: updated.first_name,
+                    lastName: updated.last_name,
+                    phone: updated.phone,
+                    birthDate: updated.birth_date,
+                    gender: updated.gender,
+                    heightCm: updated.height_cm,
+                    weightKg: updated.weight_kg,
+                    experienceLevel: updated.experience_level
+                }
+            });
+        } catch (error) {
+            console.error('Error actualizando perfil:', error);
+            res.status(500).json({ error: 'Error interno del servidor' });
+        }
+    }
+
 }
 
 module.exports = AuthController;

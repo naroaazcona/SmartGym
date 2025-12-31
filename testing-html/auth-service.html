@@ -31,26 +31,70 @@
 
         <!-- Register Section -->
         <div class="test-section">
-            <h2>👤 Registro de Usuario</h2>
-            <p>Crea una nueva cuenta en el sistema.</p>
-            
-            <div class="input-group">
-                <label for="reg-email">Email:</label>
-                <input type="email" id="reg-email" value="test@smartgym.com">
-            </div>
-            
-            <div class="input-group">
-                <label for="reg-password">Contraseña:</label>
-                <input type="password" id="reg-password" value="test123">
-            </div>
-            
-            <div class="input-group">
-                <label for="reg-name">Nombre:</label>
-                <input type="text" id="reg-name" value="Usuario Test">
-            </div>
+        <h2>👤 Registro de Usuario</h2>
+        <p>Crea una nueva cuenta en el sistema.</p>
 
-            <button onclick="register()" class="success">Registrar Usuario</button>
-            <div id="register-result" class="result"></div>
+        <div class="input-group">
+            <label for="reg-email">Email:</label>
+            <input type="email" id="reg-email" value="maria@smartgym.com">
+        </div>
+
+        <div class="input-group">
+            <label for="reg-password">Contraseña:</label>
+            <input type="password" id="reg-password" value="123456">
+        </div>
+
+        <div class="input-group">
+            <label for="reg-firstName">Nombre:</label>
+            <input type="text" id="reg-firstName" value="María">
+        </div>
+
+        <div class="input-group">
+            <label for="reg-lastName">Apellidos:</label>
+            <input type="text" id="reg-lastName" value="López">
+        </div>
+
+        <div class="input-group">
+            <label for="reg-phone">Teléfono:</label>
+            <input type="text" id="reg-phone" value="+34 600 123 456">
+        </div>
+
+        <div class="input-group">
+            <label for="reg-birthDate">Fecha de nacimiento:</label>
+            <input type="date" id="reg-birthDate" value="2000-05-10">
+        </div>
+
+        <div class="input-group">
+            <label for="reg-gender">Género:</label>
+            <select id="reg-gender">
+            <option value="">(opcional)</option>
+            <option value="female" selected>female</option>
+            <option value="male">male</option>
+            <option value="other">other</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label for="reg-heightCm">Altura (cm):</label>
+            <input type="number" id="reg-heightCm" value="165">
+        </div>
+
+        <div class="input-group">
+            <label for="reg-weightKg">Peso (kg):</label>
+            <input type="number" step="0.1" id="reg-weightKg" value="60.5">
+        </div>
+
+        <div class="input-group">
+            <label for="reg-experienceLevel">Nivel:</label>
+            <select id="reg-experienceLevel">
+            <option value="beginner" selected>beginner</option>
+            <option value="intermediate">intermediate</option>
+            <option value="advanced">advanced</option>
+            </select>
+        </div>
+
+        <button onclick="register()" class="success">Registrar Usuario</button>
+        <div id="register-result" class="result"></div>
         </div>
 
         <!-- Login Section -->
@@ -88,6 +132,40 @@
             <div id="profile-result" class="result"></div>
         </div>
 
+        <div class="test-section">
+            <h2>✏️ Actualizar Perfil</h2>
+            <p>Modifica campos del perfil (requiere autenticación).</p>
+
+            <div class="input-group">
+                <label for="upd-phone">Teléfono:</label>
+                <input type="text" id="upd-phone" placeholder="+34 600 123 456">
+            </div>
+
+            <div class="input-group">
+                <label for="upd-heightCm">Altura (cm):</label>
+                <input type="number" id="upd-heightCm" placeholder="165">
+            </div>
+
+            <div class="input-group">
+                <label for="upd-weightKg">Peso (kg):</label>
+                <input type="number" step="0.1" id="upd-weightKg" placeholder="60.5">
+            </div>
+
+            <div class="input-group">
+                <label for="upd-experienceLevel">Nivel:</label>
+                <select id="upd-experienceLevel">
+                <option value="">(no cambiar)</option>
+                <option value="beginner">beginner</option>
+                <option value="intermediate">intermediate</option>
+                <option value="advanced">advanced</option>
+                </select>
+            </div>
+
+            <button onclick="updateProfile()" class="success">Actualizar Perfil</button>
+            <div id="update-profile-result" class="result"></div>
+        </div>
+
+
         <!-- Logout Section -->
         <div class="test-section">
             <h2>🚪 Cerrar Sesión</h2>
@@ -110,10 +188,24 @@
         status: document.getElementById('service-status'),
         healthBtn: document.getElementById('health-btn'),
         healthResult: document.getElementById('health-result'),
+
         regEmail: document.getElementById('reg-email'),
         regPassword: document.getElementById('reg-password'),
-        regName: document.getElementById('reg-name'),
+        regFirstName: document.getElementById('reg-firstName'),
+        regLastName: document.getElementById('reg-lastName'),
+        regPhone: document.getElementById('reg-phone'),
+        regBirthDate: document.getElementById('reg-birthDate'),
+        regGender: document.getElementById('reg-gender'),
+        regHeightCm: document.getElementById('reg-heightCm'),
+        regWeightKg: document.getElementById('reg-weightKg'),
+        regExperienceLevel: document.getElementById('reg-experienceLevel'),
         registerResult: document.getElementById('register-result'),
+        updPhone: document.getElementById('upd-phone'),
+        updHeightCm: document.getElementById('upd-heightCm'),
+        updWeightKg: document.getElementById('upd-weightKg'),
+        updExperienceLevel: document.getElementById('upd-experienceLevel'),
+        updateProfileResult: document.getElementById('update-profile-result'),
+
         loginEmail: document.getElementById('login-email'),
         loginPassword: document.getElementById('login-password'),
         loginResult: document.getElementById('login-result'),
@@ -122,6 +214,7 @@
         tokenDisplay: document.getElementById('token-display'),
         userInfo: document.getElementById('user-info'),
         userDetails: document.getElementById('user-details'),
+        
     };
 
     function setStatus(online) {
@@ -211,12 +304,20 @@ Error: ${err.message}
             const body = {
                 email: els.regEmail.value.trim(),
                 password: els.regPassword.value,
-                name: els.regName.value.trim(),
+                firstName: els.regFirstName.value.trim(),
+                lastName: els.regLastName.value.trim(),
+                phone: els.regPhone.value.trim() || null,
+                birthDate: els.regBirthDate.value || null,
+                gender: els.regGender.value || null,
+                heightCm: els.regHeightCm.value ? Number(els.regHeightCm.value) : null,
+                weightKg: els.regWeightKg.value ? Number(els.regWeightKg.value) : null,
+                experienceLevel: els.regExperienceLevel.value || 'beginner'
             };
 
+
             // Validaciones previas
-            if (!body.email || !body.password || !body.name) {
-                throw new Error('Faltan campos requeridos (email, password, name)');
+            if (!body.email || !body.password || !body.firstName || !body.lastName) {
+                throw new Error('Faltan campos requeridos (email, password, firstName, lastName)');
             }
 
             if (body.password.length < 6) {
@@ -269,7 +370,7 @@ ${JSON.stringify(data, null, 2)}
                 `;
                 
                 printResult(els.registerResult, registerAnalysis, true);
-                if (data.token) setToken(data.token);
+                clearToken();
             } else {
                 const errorAnalysis = `
 ❌ REGISTRO FALLIDO - ANÁLISIS TÉCNICO
@@ -476,9 +577,12 @@ ${res.status === 500 ? '❌ Error interno en base de datos o middleware' : ''}
     window.fillDemoUser = fillDemoUser;
     window.getProfile = getProfile;
     window.clearToken = clearToken;
+    window.updateProfile = updateProfile;
+
 
     document.addEventListener('DOMContentLoaded', () => {
-        if (getToken()) setToken(getToken()); else hideToken();
+        hideToken();
+        localStorage.removeItem('auth_token');        
         checkServiceStatus();
     });
     
@@ -573,7 +677,82 @@ Error: ${err.message}
         logoutResult.classList.remove('success');
         logoutResult.classList.add('error');
     }
-} 
+}
+
+async function updateProfile() {
+  els.updateProfileResult.textContent = '✏️ Actualizando perfil...';
+  els.userInfo.classList.add('hidden');
+
+  const token = getToken();
+  if (!token) {
+    printResult(els.updateProfileResult, '❌ Necesitas iniciar sesión primero (no hay token).', false);
+    return;
+  }
+
+  try {
+    // Solo enviamos campos si el usuario ha escrito algo
+    const body = {};
+    const phone = els.updPhone.value.trim();
+    if (phone) body.phone = phone;
+
+    if (els.updHeightCm.value !== '') body.heightCm = Number(els.updHeightCm.value);
+    if (els.updWeightKg.value !== '') body.weightKg = Number(els.updWeightKg.value);
+
+    const lvl = els.updExperienceLevel.value;
+    if (lvl) body.experienceLevel = lvl;
+
+    if (Object.keys(body).length === 0) {
+      throw new Error('No has rellenado ningún campo para actualizar');
+    }
+
+    const startTime = Date.now();
+    const res = await fetch(`${BASE_URL}/profile`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body),
+    });
+    const endTime = Date.now();
+
+    const data = await res.json().catch(() => ({}));
+
+    if (res.ok) {
+      const okAnalysis = `
+✅ PERFIL ACTUALIZADO
+──────────────────────
+⏱️ Tiempo proceso: ${endTime - startTime}ms
+📊 Status: ${res.status}
+
+📋 CAMPOS ENVIADOS:
+${JSON.stringify(body, null, 2)}
+
+📋 RESPUESTA:
+${JSON.stringify(data, null, 2)}
+      `;
+      printResult(els.updateProfileResult, okAnalysis, true);
+
+      // (opcional) refrescar perfil automáticamente:
+      // await getProfile();
+    } else {
+      const errMsg = data.error || 'Error desconocido';
+      const errAnalysis = `
+❌ ERROR ACTUALIZANDO PERFIL
+────────────────────────────
+📊 Status: ${res.status}
+💬 Error: ${errMsg}
+
+📋 RESPUESTA:
+${JSON.stringify(data, null, 2)}
+      `;
+      printResult(els.updateProfileResult, errAnalysis, false);
+    }
+  } catch (err) {
+    printResult(els.updateProfileResult, `❌ ERROR: ${err.message}`, false);
+  }
+}
+
     </script>
 </body>
 </html>
