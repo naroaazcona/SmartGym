@@ -48,21 +48,27 @@ class User {
                     height_cm, weight_kg, experience_level
         `;
 
-        const result = await pool.query(query, [
-            userId,
-            firstName,
-            lastName,
-            phone || null,
-            birthDate || null,
-            gender || null,
-            heightCm ?? null,
-            weightKg ?? null,
-            experienceLevel || 'beginner'
-        ]);
-
-        return result.rows[0];
+        try{
+            const result = await pool.query(query, [
+                userId,
+                firstName,
+                lastName,
+                phone || null,
+                birthDate || null,
+                gender || null,
+                heightCm ?? null,
+                weightKg ?? null,
+                experienceLevel || 'beginner'
+            ]);
+            return result.rows[0];
+        } catch (error) {
+             if (error.code === '23505') {
+            //Unico numero de teléfono
+            throw new Error('El teléfono ya existe');
+        }
+        throw error;
+        }
     }
-
 
     //MÉTODOS ADICIONALES PARA INTERACTUAR CON LA TABLA DE USUARIOS
     static async findByEmail(email) {

@@ -84,7 +84,11 @@ class AuthController {
                     error: 'El usuario ya existe' 
                 });
             }
-            
+
+            if (error.message === 'El teléfono ya existe') {
+                return res.status(409).json({ error: 'El teléfono ya existe' });
+            }
+
             res.status(500).json({ 
                 error: 'Error interno del servidor' 
             });
