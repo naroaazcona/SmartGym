@@ -43,7 +43,7 @@ CREATE INDEX IF NOT EXISTS idx_user_profiles_user_id ON user_profiles(user_id);
 INSERT INTO users (email, password, name, role) 
 VALUES (
     'admin@smartgym.com', 
-    '$2a$10$Bj/owbz5If5wqQFvIOI0EOdnI6QvnqaVleOrYaM9A.vDsbYk2uBZ6', 
+    '$2b$10$UsaIu1IFS9A8oZ060BEaFuduljrzF.Of78NO4pfdh.zzP2zEMnx5W', 
     'Administrador SmartGym', 
     'admin'
 ) ON CONFLICT (email) DO NOTHING;

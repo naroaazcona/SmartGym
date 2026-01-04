@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const AuthController = require('./controllers/authController');
-const { authenticateToken } = require('./middleware/auth');
+const { authenticateToken, authorizeRoles } = require('./middleware/auth');
 const pool = require('./database/db');
 
 const app = express();
@@ -18,6 +18,7 @@ app.post('/login', AuthController.login);
 app.get('/profile', authenticateToken, AuthController.getProfile);
 app.post('/logout', authenticateToken, AuthController.logout); 
 app.put('/profile', authenticateToken, AuthController.updateProfile);
+app.post('/staff', authenticateToken, authorizeRoles('admin'), AuthController.createStaff);
 
 
 // Endpoint de health para verificar el estado del servicio
@@ -42,6 +43,6 @@ app.get('/health', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-    console.log(`Auth service - Conectado en el puerto ${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`✅ Auth service - Conectado en http://0.0.0.0:${PORT}`);
 });

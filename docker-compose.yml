@@ -38,6 +38,12 @@ services:
       - "3001:3001" 
     depends_on: 
       - auth-db 
+    environment:
+      DB_HOST: auth-db
+      DB_PORT: 5432
+      DB_USER: admin
+      DB_PASSWORD: password
+      DB_NAME: auth_db
  
   gym-service: 
     build: ./gym-service 
@@ -61,6 +67,10 @@ services:
       - auth-service 
       - gym-service 
       - training-service 
+    environment:
+      AUTH_URL: http://auth-service:3001
+      GYM_URL: http://gym-service:3002
+      TRAINING_URL: http://training-service:5000
  
   frontend: 
     build: ./frontend 

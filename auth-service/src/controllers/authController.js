@@ -259,6 +259,71 @@ class AuthController {
         }
     }
 
+    static async createStaff(req, res) {
+        try {
+            const {
+            email,
+            password,
+            firstName,
+            lastName,
+            phone,
+            birthDate,
+            gender,
+            heightCm,
+            weightKg,
+            experienceLevel,
+            role = 'trainer'
+            } = req.body;
+
+            if (!email || !password || !firstName || !lastName) {
+            return res.status(400).json({
+                error: 'Email, password, firstName y lastName son requeridos'
+            });
+            }
+
+            // Solo permitimos crear staff (trainer o admin si quieres)
+            const finalRole = role === 'admin' ? 'admin' : 'trainer';
+
+            const name = `${firstName} ${lastName}`.trim();
+
+            const user = await User.create({ email, password, name, role: finalRole });
+
+            // Crear perfil (reutilizas tu tabla user_profiles)
+            await User.createProfile(user.id, {
+                firstName,
+                lastName,
+                phone,
+                birthDate,
+                gender,
+                heightCm,
+                weightKg,
+                experienceLevel
+            });
+
+            return res.status(201).json({
+            message: 'Staff creado exitosamente',
+            user: {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                role: user.role
+            }
+            });
+        } catch (error) {
+            console.error('Error creando staff:', error);
+
+            if (error.message === 'El usuario ya existe') {
+                return res.status(409).json({ error: 'El usuario ya existe' });
+            }
+            if (error.message === 'El teléfono ya existe') {
+                return res.status(409).json({ error: 'El teléfono ya existe' });
+            }
+
+            return res.status(500).json({ error: 'Error interno del servidor' });
+        }
+    }
+
+
 }
 
 module.exports = AuthController;

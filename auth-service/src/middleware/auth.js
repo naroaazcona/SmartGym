@@ -21,8 +21,18 @@ const authenticateToken = (req, res, next) => {
         
         req.userId = decoded.userId;
         req.userRole = decoded.role;
+
+        req.user = { id: decoded.userId, role: decoded.role, email: decoded.email };
         next();
     });
 };
 
-module.exports = { authenticateToken };
+const authorizeRoles = (...roles) => (req, res, next) => {
+  const role = req.user?.role || req.userRole;
+  if (!role || !roles.includes(role)) {
+    return res.status(403).json({ error: 'No tienes permisos para esta acción' });
+  }
+  next();
+};
+
+module.exports = { authenticateToken, authorizeRoles };
