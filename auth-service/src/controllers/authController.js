@@ -3,6 +3,26 @@ const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'smartgym_secret_key_2024_tfg';
 const JWT_EXPIRES_IN = '24h';
+const ALLOWED_EMAIL_PROVIDERS = ['gmail', 'outlook', 'yahoo'];
+
+function normalizeEsPhone(value = '') {
+    const digits = String(value || '').replace(/[^\d]/g, '');
+    if (!digits) return null;
+
+    let local = digits;
+    if (local.startsWith('0034')) local = local.slice(4);
+    if (local.startsWith('34')) local = local.slice(2);
+    local = local.replace(/^0+/, '');
+
+    return local ? `+34 ${local}` : '+34';
+}
+
+function isAllowedEmailProvider(email = '') {
+    const domain = String(email).toLowerCase().trim().split('@')[1];
+    if (!domain) return false;
+    const provider = domain.split('.')[0];
+    return ALLOWED_EMAIL_PROVIDERS.includes(provider);
+}
 
 class AuthController {
     static async register(req, res) {
@@ -13,6 +33,12 @@ class AuthController {
             if (!email || !password || !firstName || !lastName) {
                 return res.status(400).json({ 
                     error: 'Email, password, firstName y lastName son requeridos' 
+                });
+            }
+
+            if (!isAllowedEmailProvider(email)) {
+                return res.status(400).json({
+                    error: 'Solo se permiten correos de Gmail, Outlook o Yahoo'
                 });
             }
 
@@ -36,7 +62,7 @@ class AuthController {
             await User.createProfile(user.id, {
                 firstName,
                 lastName,
-                phone,
+                phone: normalizeEsPhone(phone),
                 birthDate,
                 gender,
                 heightCm,
@@ -227,7 +253,7 @@ class AuthController {
             const updated = await User.updateProfile(req.userId, {
                 firstName,
                 lastName,
-                phone,
+                phone: phone === undefined ? undefined : normalizeEsPhone(phone),
                 birthDate,
                 gender,
                 heightCm,
@@ -292,7 +318,7 @@ class AuthController {
             await User.createProfile(user.id, {
                 firstName,
                 lastName,
-                phone,
+                phone: normalizeEsPhone(phone),
                 birthDate,
                 gender,
                 heightCm,

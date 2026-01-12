@@ -1,12 +1,20 @@
 import { Navbar } from "../components/Navbar.js";
 import { authStore } from "../state/authStore.js";
+import { authService } from "../services/authService.js";
 import { navigate } from "../router.js";
 
 export async function AdminDashboard() {
-  if (!authStore.token) navigate("/login");
-  if (authStore.role && authStore.role !== "admin") navigate("/");
+  const me = await authService.loadSession().catch(() => authStore.me);
+  if (!authStore.token || !me) {
+    navigate("/login");
+    return "";
+  }
+  if (me.role && me.role !== "admin") {
+    navigate("/");
+    return "";
+  }
 
-  const name = authStore.me?.name || authStore.me?.email || "Admin";
+  const name = me?.profile?.firstName || me?.name || me?.email || "Admin";
 
   return `
     <!-- Fondo animado -->

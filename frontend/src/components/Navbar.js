@@ -11,7 +11,7 @@ export function Navbar() {
     ? `<span class="dot"></span>`
     : `<span class="dot off"></span>`;
 
-  const roleLabel = isOnline ? `<b>${role ?? "member"}</b>` : "—";
+  const roleLabel = isOnline ? `<b>${role ?? "member"}</b>` : "Invitado";
 
   // delegación segura
   setTimeout(() => {
@@ -27,12 +27,12 @@ export function Navbar() {
     <div class="navbar-wrap">
       <div class="container">
         <div class="navbar">
-          <div class="brand">
+          <a class="brand" href="#/">
             <div class="logo">SG</div>
             <div class="brand-title">
               <span class="name">SmartGym</span>
             </div>
-          </div>
+          </a>
 
           <div class="navlinks">
             <span class="pill">${dot} ${session} · ${roleLabel}</span>
@@ -42,6 +42,7 @@ export function Navbar() {
             ${role === "trainer" ? `<a class="linkbtn" href="#/trainer">Entrenador</a>` : ``}
             ${role === "admin" ? `<a class="linkbtn" href="#/admin">Admin</a>` : ``}
             ${isOnline ? `<button class="linkbtn" id="logout-btn">Salir</button>` : ``}
+            ${isOnline ? `<a class="avatar-btn" href="#/perfil" title="Mi perfil" aria-label="Mi perfil">&#128100;</a>` : ``}
           </div>
         </div>
       </div>

@@ -6,10 +6,12 @@ import { LoginPage } from "./pages/Login.js";
 import { MemberDashboard } from "./pages/MemberDashboard.js";
 import { TrainerDashboard } from "./pages/TrainerDashboard.js";
 import { AdminDashboard } from "./pages/AdminDashboard.js";
+import { ProfilePage } from "./pages/Profile.js";
 import { NotFoundPage } from "./pages/NotFound.js";
 
 registerRoute("/", HomePage);
 registerRoute("/login", LoginPage);
+registerRoute("/perfil", ProfilePage);
 registerRoute("/member", MemberDashboard);
 registerRoute("/trainer", TrainerDashboard);
 registerRoute("/admin", AdminDashboard);

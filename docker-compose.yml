@@ -76,6 +76,7 @@ services:
     build: ./frontend 
     ports: 
       - "8080:80" 
+    command: ["sh", "-c", "printf '\\033[1;36mSmartGym frontend -> http://localhost:8080\\033[0m\\n' && nginx -g 'daemon off;'"]
 
   pgadmin:
     image: dpage/pgadmin4:latest

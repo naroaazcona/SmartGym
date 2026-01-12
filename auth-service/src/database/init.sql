@@ -61,7 +61,7 @@ VALUES (
 INSERT INTO users (email, password, name, role) 
 VALUES (
     'entrenador@smartgym.com', 
-    '$2a$10$K3O0K2RSEYt1E/yqUyBFXODk0UEKKHreiPSmVn0QrzoSObJD.9X4i', 
+    '$2a$10$o9fPeromqVeBJ8Bf7J9WpO5.hk8My69qD8x/bF4wGaHvDpuKpP8Ie', 
     'Entrenador Profesional', 
     'trainer'
 ) ON CONFLICT (email) DO NOTHING;
