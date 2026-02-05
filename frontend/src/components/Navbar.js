@@ -38,7 +38,8 @@ export function Navbar() {
             <span class="pill">${dot} ${session} · ${roleLabel}</span>
             <a class="linkbtn" href="#/">Inicio</a>
             ${!isOnline ? `<a class="linkbtn" href="#/login">Acceder</a>` : ``}
-            ${role === "member" ? `<a class="linkbtn" href="#/member">Área socio</a>` : ``}
+            ${role === "member" ? `<a class="linkbtn" href="#/member">Reservas</a>` : ``}
+            ${role === "member" ? `<a class="linkbtn" href="#/mis-reservas">Mis reservas</a>` : ``}
             ${role === "trainer" ? `<a class="linkbtn" href="#/trainer">Entrenador</a>` : ``}
             ${role === "admin" ? `<a class="linkbtn" href="#/admin">Admin</a>` : ``}
             ${isOnline ? `<button class="linkbtn" id="logout-btn">Salir</button>` : ``}

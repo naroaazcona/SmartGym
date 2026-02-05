@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🏋️‍♂️ SmartGym - Gym Service Test</title>
+  <link rel="stylesheet" href="gym-service.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🏋️‍♂️ SmartGym</h1>
+      <div class="subtitle">Gym Service - Panel de Pruebas (Clases y Reservas)</div>
+    </header>
+
+    <div class="service-status">
+      <div>
+        <strong>🏟️ Gym Service</strong>
+        <div id="base-url">http://localhost:3000/gym</div>
+      </div>
+      <div id="service-status" class="status-badge">Verificando...</div>
+    </div>
+
+    <!-- Token Section -->
+    <div class="test-section">
+      <h2>🔑 Token JWT</h2>
+      <p>Este panel usa <code>localStorage.auth_token</code> (el mismo token del panel de Auth). También puedes pegar uno manualmente.</p>
+
+      <div class="input-group">
+        <label for="token-input">Token (opcional):</label>
+        <input type="text" id="token-input" placeholder="Pega aquí un JWT si quieres sobrescribir el de localStorage">
+      </div>
+
+      <button onclick="useTokenFromLocalStorage()" class="secondary">Usar token de localStorage</button>
+      <button onclick="saveManualToken()" class="success">Guardar token manual</button>
+      <button onclick="clearToken()" class="danger">Limpiar token</button>
+
+      <div id="token-section" class="hidden">
+        <h4>🔐 Token activo:</h4>
+        <div id="token-display" class="token-display"></div>
+      </div>
+
+      <div id="token-result" class="result"></div>
+    </div>
+
+    <!-- Health Check -->
+    <div class="test-section">
+      <h2>🏥 Health Check</h2>
+      <p>Verifica que el gym-service esté funcionando.</p>
+      <button onclick="testHealth()" id="health-btn">Probar Health Check</button>
+      <div id="health-result" class="result"></div>
+    </div>
+
+    <!-- Class Types -->
+    <div class="test-section">
+      <h2>🏷️ Tipos de Clase</h2>
+      <p>Lista y crea tipos de clase (crear requiere <strong>admin</strong>).</p>
+
+      <button onclick="listClassTypes()">Listar Tipos</button>
+      <div id="class-types-result" class="result"></div>
+
+      <hr class="sep"/>
+
+      <h3>➕ Crear Tipo (admin)</h3>
+      <div class="input-group">
+        <label for="ct-name">Nombre:</label>
+        <input type="text" id="ct-name" value="Spinning">
+      </div>
+      <div class="input-group">
+        <label for="ct-desc">Descripción:</label>
+        <input type="text" id="ct-desc" value="Clase intensa de cardio">
+      </div>
+
+      <button onclick="createClassType()" class="success">Crear Tipo</button>
+      <div id="create-class-type-result" class="result"></div>
+    </div>
+
+    <!-- Classes -->
+    <div class="test-section">
+      <h2>📅 Clases</h2>
+      <p>Lista clases y crea sesiones (crear requiere <strong>admin</strong>).</p>
+
+      <div class="input-grid">
+        <div class="input-group">
+          <label for="from-date">Desde (ISO opcional):</label>
+          <input type="text" id="from-date" placeholder="2026-01-03T00:00:00Z">
+        </div>
+        <div class="input-group">
+          <label for="to-date">Hasta (ISO opcional):</label>
+          <input type="text" id="to-date" placeholder="2026-01-10T23:59:59Z">
+        </div>
+      </div>
+
+      <button onclick="listClasses()">Listar Clases</button>
+      <div id="classes-result" class="result"></div>
+
+      <hr class="sep"/>
+
+      <h3>➕ Crear Clase (admin)</h3>
+      <div class="input-grid">
+        <div class="input-group">
+          <label for="c-type-id">Class Type ID:</label>
+          <input type="number" id="c-type-id" value="1">
+        </div>
+        <div class="input-group">
+          <label for="c-capacity">Capacidad:</label>
+          <input type="number" id="c-capacity" value="20">
+        </div>
+      </div>
+
+      <div class="input-grid">
+        <div class="input-group">
+          <label for="c-starts">Empieza (ISO):</label>
+          <input type="text" id="c-starts" value="2026-01-03T18:00:00Z">
+        </div>
+        <div class="input-group">
+          <label for="c-ends">Termina (ISO):</label>
+          <input type="text" id="c-ends" value="2026-01-03T19:00:00Z">
+        </div>
+      </div>
+
+      <div class="input-grid">
+        <div class="input-group">
+          <label for="trainer_user_id">trainer_user_id (solo admin):</label>
+          <input type="number" id="trainer_user_id" placeholder="Ej: 7">
+        </div>
+        <div class="input-group">
+          <label for="c-location">Lugar (opcional):</label>
+          <input type="text" id="c-location" value="Sala 1">
+        </div>
+      </div>
+
+      <button onclick="createClass()" class="success">Crear Clase</button>
+      <div id="create-class-result" class="result"></div>
+    </div>
+
+    <!-- Reservations -->
+    <div class="test-section">
+      <h2>🎟️ Reservas</h2>
+      <p>Reservar/cancelar (usuario) y ver reservas (admin).</p>
+
+      <div class="input-grid">
+        <div class="input-group">
+          <label for="r-class-id">Class ID:</label>
+          <input type="number" id="r-class-id" value="1">
+        </div>
+        <div class="input-group">
+          <label for="r-mode">Acción:</label>
+          <select id="r-mode">
+            <option value="reserve" selected>Reservar</option>
+            <option value="cancel">Cancelar</option>
+            <option value="admin_list">Ver reservas (admin)</option>
+          </select>
+        </div>
+      </div>
+
+      <button onclick="doReservationAction()" class="success">Ejecutar</button>
+      <div id="reservations-result" class="result"></div>
+    </div>
+  </div>
+
+  <script>
+    // ✅ Por defecto vía API Gateway
+    const BASE_URL = 'http://localhost:3002';
+
+    const els = {
+      baseUrl: document.getElementById('base-url'),
+      status: document.getElementById('service-status'),
+      healthBtn: document.getElementById('health-btn'),
+
+      tokenInput: document.getElementById('token-input'),
+      tokenSection: document.getElementById('token-section'),
+      tokenDisplay: document.getElementById('token-display'),
+      tokenResult: document.getElementById('token-result'),
+
+      healthResult: document.getElementById('health-result'),
+
+      classTypesResult: document.getElementById('class-types-result'),
+      ctName: document.getElementById('ct-name'),
+      ctDesc: document.getElementById('ct-desc'),
+      createClassTypeResult: document.getElementById('create-class-type-result'),
+
+      fromDate: document.getElementById('from-date'),
+      toDate: document.getElementById('to-date'),
+      classesResult: document.getElementById('classes-result'),
+
+      cTypeId: document.getElementById('c-type-id'),
+      cCapacity: document.getElementById('c-capacity'),
+      cStarts: document.getElementById('c-starts'),
+      cEnds: document.getElementById('c-ends'),
+      cLocation: document.getElementById('c-location'),
+      createClassResult: document.getElementById('create-class-result'),
+
+      rClassId: document.getElementById('r-class-id'),
+      rMode: document.getElementById('r-mode'),
+      reservationsResult: document.getElementById('reservations-result'),
+
+      trainerUserId: document.getElementById('trainer_user_id'),
+      adminTrainerBox: document.getElementById('adminTrainerBox'),
+
+    };
+
+    els.baseUrl.textContent = BASE_URL;
+
+    function setStatus(online) {
+      els.status.textContent = online ? '✅ ONLINE' : '❌ OFFLINE';
+      els.status.classList.toggle('offline', !online);
+    }
+
+    function printResult(el, data, ok = true) {
+      el.classList.remove('success', 'error');
+      el.classList.add(ok ? 'success' : 'error');
+      el.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+    }
+
+    function getToken() { return localStorage.getItem('auth_token') || ''; }
+
+    function showToken(token) {
+      if (token) {
+        els.tokenSection.classList.remove('hidden');
+        els.tokenDisplay.textContent = token;
+      } else {
+        els.tokenSection.classList.add('hidden');
+        els.tokenDisplay.textContent = '';
+      }
+    }
+
+    function useTokenFromLocalStorage() {
+      const token = getToken();
+      showToken(token);
+
+      if (!token) {
+        printResult(els.tokenResult, '❌ No hay token en localStorage.auth_token. Inicia sesión en el panel de Auth.', false);
+        return;
+      }
+      printResult(els.tokenResult, '✅ Usando token de localStorage.auth_token', true);
+    }
+
+    function saveManualToken() {
+      const token = els.tokenInput.value.trim();
+      if (!token) {
+        printResult(els.tokenResult, '❌ Pega un token en el campo primero.', false);
+        return;
+      }
+      localStorage.setItem('auth_token', token);
+      showToken(token);
+      printResult(els.tokenResult, '✅ Token guardado en localStorage.auth_token', true);
+    }
+
+    function clearToken() {
+      localStorage.removeItem('auth_token');
+      els.tokenInput.value = '';
+      showToken('');
+      printResult(els.tokenResult, '✅ Token eliminado.', true);
+    }
+
+    function authHeaders() {
+      const token = getToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      return headers;
+    }
+
+    async function checkServiceStatus() {
+      try {
+        const res = await fetch(`${BASE_URL}/health`);
+        setStatus(res.ok);
+      } catch (_) {
+        setStatus(false);
+      }
+    }
+
+    async function testHealth() {
+      els.healthBtn.disabled = true;
+      els.healthResult.textContent = '🔍 Comprobando servicio...';
+
+      try {
+        const startTime = Date.now();
+        const res = await fetch(`${BASE_URL}/health`);
+        const endTime = Date.now();
+        const data = await res.json().catch(() => ({}));
+
+        const analysis = `
+🏥 HEALTH CHECK - GYM SERVICE
+────────────────────────────
+⏱️ Tiempo respuesta: ${endTime - startTime}ms
+📊 Estado HTTP: ${res.status} ${res.ok ? '(OK)' : '(ERROR)'}
+
+📋 RESPUESTA:
+${JSON.stringify(data, null, 2)}
+        `;
+        printResult(els.healthResult, analysis, res.ok);
+        setStatus(res.ok);
+      } catch (err) {
+        printResult(els.healthResult, `❌ ERROR: ${err.message}`, false);
+        setStatus(false);
+      } finally {
+        els.healthBtn.disabled = false;
+      }
+    }
+
+    async function listClassTypes() {
+      els.classTypesResult.textContent = '📥 Consultando /class-types...';
+      try {
+        const res = await fetch(`${BASE_URL}/class-types`);
+        const data = await res.json().catch(() => ({}));
+
+        const out = `
+📋 LISTA DE TIPOS DE CLASE
+──────────────────────────
+Status: ${res.status}
+
+${JSON.stringify(data, null, 2)}
+        `;
+        printResult(els.classTypesResult, out, res.ok);
+      } catch (err) {
+        printResult(els.classTypesResult, `❌ ERROR: ${err.message}`, false);
+      }
+    }
+
+    async function createClassType() {
+      els.createClassTypeResult.textContent = '➕ Creando tipo de clase (admin)...';
+      try {
+        const body = {
+          name: els.ctName.value.trim(),
+          description: els.ctDesc.value.trim()
+        };
+
+        if (!body.name) {
+          printResult(els.createClassTypeResult, '❌ name es requerido', false);
+          return;
+        }
+
+        const res = await fetch(`${BASE_URL}/class-types`, {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify(body)
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        const out = `
+➕ CREAR TIPO
+────────────
+Status: ${res.status}
+
+${JSON.stringify(data, null, 2)}
+
+💡 Si te da 403: el token no es admin.
+        `;
+        printResult(els.createClassTypeResult, out, res.ok);
+      } catch (err) {
+        printResult(els.createClassTypeResult, `❌ ERROR: ${err.message}`, false);
+      }
+    }
+
+    async function listClasses() {
+      els.classesResult.textContent = '📥 Consultando /classes...';
+
+      try {
+        const params = new URLSearchParams();
+        if (els.fromDate.value.trim()) params.set('from', els.fromDate.value.trim());
+        if (els.toDate.value.trim()) params.set('to', els.toDate.value.trim());
+
+        const url = `${BASE_URL}/classes${params.toString() ? `?${params.toString()}` : ''}`;
+        const res = await fetch(url);
+        const data = await res.json().catch(() => ({}));
+
+        const out = `
+📅 LISTA DE CLASES
+──────────────────
+URL: ${url}
+Status: ${res.status}
+
+${JSON.stringify(data, null, 2)}
+        `;
+        printResult(els.classesResult, out, res.ok);
+      } catch (err) {
+        printResult(els.classesResult, `❌ ERROR: ${err.message}`, false);
+      }
+    }
+
+  async function createClass() {
+    els.createClassResult.textContent = '➕ Creando clase...';
+
+    try {
+      const body = {
+        class_type_id: Number(els.cTypeId.value),
+        starts_at: els.cStarts.value.trim(),
+        ends_at: els.cEnds.value.trim(),
+        capacity: Number(els.cCapacity.value),
+        location: els.cLocation.value.trim() || null
+      };
+
+      if (!body.class_type_id || !body.starts_at || !body.ends_at || !body.capacity) {
+        printResult(els.createClassResult, '❌ Faltan campos requeridos (class_type_id, starts_at, ends_at, capacity)', false);
+        return;
+      }
+
+      // ✅ SOLO si eres admin, exige trainer_user_id
+      const role = getRoleFromToken();
+
+      if (role === 'admin') {
+        const tId = Number(els.trainerUserId?.value);
+        if (!tId) {
+          printResult(els.createClassResult, '❌ Como admin debes rellenar trainer_user_id', false);
+          return;
+        }
+        body.trainer_user_id = tId;
+      }
+
+
+      const res = await fetch(`${BASE_URL}/classes`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify(body)
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      const out = `
+➕ CREAR CLASE
+─────────────
+Status: ${res.status}
+
+${JSON.stringify(data, null, 2)}
+    `;
+
+    printResult(els.createClassResult, out, res.ok);
+  } catch (err) {
+    printResult(els.createClassResult, `❌ ERROR: ${err.message}`, false);
+  }
+}
+
+    document.addEventListener('DOMContentLoaded', () => {
+      refreshAdminField();
+    });
+
+    function decodeJwtPayload(token) {
+      try {
+      const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        return JSON.parse(atob(base64));
+      } catch {
+        return null;
+      }
+    }
+
+    function getRoleFromToken() {
+      const token = getToken();
+      const payload = decodeJwtPayload(token);
+      return payload?.role || null;
+    }
+
+    function refreshAdminField() {
+      const role = getRoleFromToken();   // ✅ sale del JWT
+      if (els.adminTrainerBox) {
+        els.adminTrainerBox.style.display = role === 'admin' ? 'block' : 'none';
+      }
+    }
+
+    async function doReservationAction() {
+      const classId = Number(els.rClassId.value);
+      const mode = els.rMode.value;
+
+      if (!classId) {
+        printResult(els.reservationsResult, '❌ classId inválido', false);
+        return;
+      }
+
+      const token = getToken();
+      if (!token) {
+        printResult(els.reservationsResult, '❌ No hay token. Inicia sesión en el panel de Auth o pega uno manual.', false);
+        return;
+      }
+
+      try {
+        let url = '';
+        let method = 'POST';
+        let body = null;
+
+        if (mode === 'reserve') {
+          url = `${BASE_URL}/classes/${classId}/reserve`;
+        } else if (mode === 'cancel') {
+          url = `${BASE_URL}/classes/${classId}/cancel`;
+        } else {
+          // admin_list
+          url = `${BASE_URL}/classes/${classId}/reservations`;
+          method = 'GET';
+        }
+
+        els.reservationsResult.textContent = `📡 Llamando ${method} ${url}...`;
+
+        const res = await fetch(url, {
+          method,
+          headers: authHeaders(),
+          body
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        const out = `
+🎟️ ACCIÓN: ${mode.toUpperCase()}
+────────────────────────
+URL: ${url}
+Status: ${res.status}
+
+${JSON.stringify(data, null, 2)}
+
+💡 401/403 = token faltante o inválido, o rol insuficiente.
+        `;
+        printResult(els.reservationsResult, out, res.ok);
+      } catch (err) {
+        printResult(els.reservationsResult, `❌ ERROR: ${err.message}`, false);
+      }
+    }
+
+    // Exponer funciones a botones inline
+    window.useTokenFromLocalStorage = useTokenFromLocalStorage;
+    window.saveManualToken = saveManualToken;
+    window.clearToken = clearToken;
+
+    window.testHealth = testHealth;
+
+    window.listClassTypes = listClassTypes;
+    window.createClassType = createClassType;
+
+    window.listClasses = listClasses;
+    window.createClass = createClass;
+
+    window.doReservationAction = doReservationAction;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      showToken(getToken());
+      checkServiceStatus();
+    });
+  </script>
+</body>
+</html>

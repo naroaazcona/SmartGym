@@ -2,6 +2,7 @@ import { Navbar } from "../components/Navbar.js";
 import { authStore } from "../state/authStore.js";
 import { authService } from "../services/authService.js";
 import { navigate } from "../router.js";
+import { gymService } from "../services/gymService.js";
 
 export async function TrainerDashboard() {
   const me = await authService.loadSession().catch(() => authStore.me);
@@ -16,52 +17,213 @@ export async function TrainerDashboard() {
 
   const name = me?.profile?.firstName || me?.name || me?.email || "Entrenador";
 
-  setTimeout(() => {
-    const form = document.querySelector("#create-class-form");
-    const msg = document.querySelector("#create-class-msg");
-    const err = document.querySelector("#create-class-error");
-    const submitBtn = document.querySelector("#create-class-btn");
+  const heroImages = {
+    crossfit: "https://images.unsplash.com/photo-1554344058-8d1d1bcdfaf8?auto=format&fit=crop&w=1200&q=80",
+    hiit: "https://images.unsplash.com/photo-1556817411-31ae72fa3ea0?auto=format&fit=crop&w=1200&q=80",
+    mobility: "https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?auto=format&fit=crop&w=1200&q=80",
+    spinning: "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?auto=format&fit=crop&w=1200&q=80",
+    cycling: "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?auto=format&fit=crop&w=1200&q=80",
+    strength: "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=1200&q=80",
+  };
+  const imgForType = (type) => heroImages[String(type || "").toLowerCase()] || heroImages.strength;
 
-    const setStatus = (text = "", isError = false) => {
-      if (msg) msg.textContent = !isError ? text : "";
-      if (err) err.textContent = isError ? text : "";
+  const today = new Date();
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
+  const end = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+
+  const classTypes = await gymService.listClassTypes().catch(() => []);
+  const classes = await gymService
+    .listClasses({ from: start.toISOString(), to: end.toISOString() })
+    .catch(() => []);
+
+  const myClasses = classes.filter(
+    (c) => Number(c.trainer_user_id) === Number(me.id) || !c.trainer_user_id
+  );
+
+  const fmtDate = (iso) =>
+    new Date(iso).toLocaleString("es-ES", {
+      weekday: "short",
+      day: "2-digit",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+  const renderCard = (cls) => {
+    const full = Number(cls.booked_count || 0) >= Number(cls.capacity);
+    return `
+      <article class="class-card" data-class-id="${cls.id}">
+        <div class="backdrop" style="background-image:url('${imgForType(cls.class_type_name)}')"></div>
+        <div class="tag ${full ? "red" : "green"}">${cls.class_type_name || "Clase"}</div>
+        <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
+          <div>
+            <div style="font-weight:1000;">${fmtDate(cls.starts_at)}</div>
+            <div class="dim">${cls.capacity} plazas · ${cls.booked_count || 0} reservas · ${cls.location || "Centro"}</div>
+            ${cls.instructor_name ? `<div class="dim">Coach: ${cls.instructor_name}</div>` : ""}
+          </div>
+          <span class="badge ${full ? "red" : "green"}">${full ? "Completa" : `${cls.capacity - (cls.booked_count || 0)} libres`}</span>
+        </div>
+        ${cls.description ? `<p class="sub" style="margin:6px 0; color:#e8edf6;">${cls.description}</p>` : ""}
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+          <button class="btn btn-primary" data-action="reservations" data-id="${cls.id}">Reservas</button>
+          <button class="btn btn-ghost" data-action="delete" data-id="${cls.id}">Eliminar</button>
+        </div>
+      </article>
+    `;
+  };
+
+  const typeOptions = [
+    `<option value="" disabled selected hidden>Elige tipo</option>`,
+    ...classTypes.map((t) => `<option value="${t.id}">${t.name}</option>`),
+  ].join("");
+
+  const initialList = myClasses.length
+    ? myClasses.map(renderCard).join("")
+    : "<p class='sub'>No tienes clases asignadas hoy.</p>";
+
+  setTimeout(() => {
+    const listEl = document.querySelector("#trainer-classes");
+    const statusEl = document.querySelector("#trainer-status");
+    const resEl = document.querySelector("#trainer-reservations");
+    const resTitle = document.querySelector("#trainer-res-title");
+    const resStatus = document.querySelector("#trainer-res-status");
+    const form = document.querySelector("#trainer-create-class");
+    const createMsg = document.querySelector("#trainer-create-msg");
+    const refreshBtn = document.querySelector("#trainer-refresh");
+    let current = myClasses.slice();
+
+    const renderReservations = (items) => {
+      if (!resEl) return;
+      if (!items.length) {
+        resEl.innerHTML = "<p class='sub'>Sin reservas aún.</p>";
+        return;
+      }
+      resEl.innerHTML = items
+        .map(
+          (r) => `
+          <li class="row">
+            <span>#${r.id} · Usuario ${r.user_id}</span>
+            <span class="pill">${r.status}</span>
+          </li>`
+        )
+        .join("");
     };
+
+      const renderList = (items) => {
+        if (!listEl) return;
+        listEl.innerHTML = items.length
+          ? items.map(renderCard).join("")
+          : "<p class='sub'>No tienes clases asignadas.</p>";
+      };
+
+    const setStatus = (txt, isError = false) => {
+      if (!statusEl) return;
+      statusEl.textContent = txt;
+      statusEl.style.color = isError ? "#b42318" : "var(--muted)";
+    };
+
+    const loadClasses = async () => {
+      setStatus("Actualizando clases...");
+      try {
+        const data = await gymService.listClasses({
+          from: start.toISOString(),
+          to: end.toISOString(),
+        });
+        current = data.filter(
+          (c) => Number(c.trainer_user_id) === Number(me.id) || !c.trainer_user_id
+        );
+        renderList(current);
+        setStatus(`Clases para hoy: ${current.length}.`);
+      } catch (err) {
+        console.error(err);
+        setStatus(err.message || "No se pudieron cargar las clases.", true);
+      }
+    };
+
+    listEl?.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-action]");
+      if (!btn) return;
+      const id = Number(btn.dataset.id);
+      const action = btn.dataset.action;
+      if (!id) return;
+
+      const toggle = (isLoading, label) => {
+        btn.disabled = isLoading;
+        if (!btn.dataset.label) btn.dataset.label = btn.textContent;
+        btn.textContent = isLoading ? label : btn.dataset.label;
+      };
+
+      try {
+        if (action === "reservations") {
+          toggle(true, "Cargando...");
+          const reservations = await gymService.listReservations(id);
+          if (resTitle) resTitle.textContent = `Reservas de la clase ${id}`;
+          renderReservations(reservations);
+          if (resStatus) resStatus.textContent = `${reservations.length} reservas encontradas`;
+        }
+        if (action === "delete") {
+          toggle(true, "Eliminando...");
+          await gymService.deleteClass(id);
+          if (resTitle) resTitle.textContent = "Reservas de clase";
+          renderReservations([]);
+          await loadClasses();
+        }
+      } catch (err) {
+        if (resStatus) resStatus.textContent = err.message || "Error al procesar.";
+      } finally {
+        toggle(false);
+      }
+    });
 
     form?.addEventListener("submit", async (e) => {
       e.preventDefault();
-      setStatus();
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = "Creando...";
-      }
-
-      const payload = {
-        title: form.title.value.trim(),
-        date: form.date.value,
-        time: form.time.value,
-        room: form.room.value.trim(),
-        capacity: form.capacity.value ? Number(form.capacity.value) : null,
+      if (createMsg) createMsg.textContent = "";
+      const btn = form.querySelector("button[type='submit']");
+      const toggle = (isLoading, label) => {
+        if (!btn) return;
+        btn.disabled = isLoading;
+        if (!btn.dataset.label) btn.dataset.label = btn.textContent;
+        btn.textContent = isLoading ? label : btn.dataset.label;
       };
 
-      if (!payload.title || !payload.date || !payload.time) {
-        setStatus("Completa titulo, fecha y hora.", true);
-        if (submitBtn) {
-          submitBtn.disabled = false;
-          submitBtn.textContent = "Crear clase";
-        }
+      const date = form.date.value;
+      const startTime = form.start.value;
+      const endTime = form.end.value;
+      const classTypeId = form.classTypeId.value;
+      const capacity = form.capacity.value ? Number(form.capacity.value) : null;
+      const location = form.room.value.trim();
+      const instructor = form.instructor.value.trim() || name;
+      const description = form.description.value.trim();
+
+      if (!date || !startTime || !endTime || !classTypeId || !capacity) {
+        if (createMsg) createMsg.textContent = "Completa tipo, fecha, horas y capacidad.";
         return;
       }
 
-      // Simulación local sin llamar al backend
-      setTimeout(() => {
-        setStatus(`Clase "${payload.title}" lista para enviar al backend.`, false);
+      try {
+        toggle(true, "Creando...");
+        await gymService.createClass({
+          class_type_id: Number(classTypeId),
+          starts_at: new Date(`${date}T${startTime}`).toISOString(),
+          ends_at: new Date(`${date}T${endTime}`).toISOString(),
+          capacity,
+          location,
+          instructor_name: instructor,
+          description: description || null,
+        });
         form.reset();
-        if (submitBtn) {
-          submitBtn.disabled = false;
-          submitBtn.textContent = "Crear clase";
-        }
-      }, 400);
+        if (createMsg) createMsg.textContent = "Clase creada.";
+        await loadClasses();
+      } catch (err) {
+        if (createMsg) createMsg.textContent = err.message || "No se pudo crear la clase.";
+      } finally {
+        toggle(false);
+      }
     });
+
+    refreshBtn?.addEventListener("click", () => loadClasses());
+
+    renderList(current);
   }, 0);
 
   return `
@@ -74,35 +236,25 @@ export async function TrainerDashboard() {
           <div class="card">
             <div class="kicker">PANEL ENTRENADOR</div>
             <h2 class="h2">${name} · turno de hoy</h2>
-            <p class="sub">Gestiona clases, pasa lista y revisa el aforo.</p>
+            <p class="sub">Gestiona tus clases, revisa reservas y crea sesiones nuevas.</p>
 
             <div class="grid">
               <div class="card" style="grid-column: span 7;">
                 <div class="kicker">Clases del día</div>
-                <ul class="list">
-                  <li class="row">
-                    <div>
-                      <div style="font-weight:1000;">18:00 · Fuerza & Core</div>
-                      <div class="dim">16 plazas · 16 reservas</div>
-                    </div>
-                    <button class="btn btn-primary" disabled>Pasar lista</button>
-                  </li>
-                  <li class="row">
-                    <div>
-                      <div style="font-weight:1000;">19:30 · Mobility Reset</div>
-                      <div class="dim">24 plazas · 13 reservas</div>
-                    </div>
-                    <button class="btn btn-ghost" disabled>Ver</button>
-                  </li>
-                </ul>
-                <div class="footer">Reemplaza los items por datos reales de <code>src/api/gym.js</code>.</div>
+                <div class="dim" id="trainer-status">Conectado al servicio.</div>
+                <div class="class-gallery" id="trainer-classes" style="margin-top:8px;">
+                  ${initialList}
+                </div>
+                <div class="mtop" style="display:flex; gap:10px; flex-wrap:wrap;">
+                  <button class="btn btn-primary" id="trainer-refresh" type="button">Actualizar</button>
+                </div>
               </div>
 
               <div class="card" style="grid-column: span 5;">
                 <div class="kicker">Crear nueva clase</div>
-                <form id="create-class-form" class="form" style="margin-top:8px; display:flex; flex-direction:column; gap:10px;">
-                  <label>Título</label>
-                  <input name="title" type="text" placeholder="HIIT Nocturno" required />
+                <form id="trainer-create-class" class="form" style="margin-top:8px; display:flex; flex-direction:column; gap:10px;">
+                  <label>Tipo de clase</label>
+                  <select name="classTypeId" required>${typeOptions}</select>
 
                   <div class="form-row">
                     <div class="form-col">
@@ -110,53 +262,43 @@ export async function TrainerDashboard() {
                       <input name="date" type="date" required />
                     </div>
                     <div class="form-col">
-                      <label>Hora</label>
-                      <input name="time" type="time" required />
+                      <label>Inicio</label>
+                      <input name="start" type="time" required />
+                    </div>
+                    <div class="form-col">
+                      <label>Fin</label>
+                      <input name="end" type="time" required />
                     </div>
                   </div>
 
                   <div class="form-row">
                     <div class="form-col">
-                      <label>Sala</label>
+                      <label>Sala / ubicacion</label>
                       <input name="room" type="text" placeholder="Sala 2" />
                     </div>
                     <div class="form-col">
                       <label>Capacidad</label>
-                      <input name="capacity" type="number" min="1" placeholder="20" />
+                      <input name="capacity" type="number" min="1" placeholder="20" required />
                     </div>
                   </div>
 
+                  <label>Coach visible</label>
+                  <input name="instructor" type="text" placeholder="${name}" />
+
+                  <label>Descripción de la clase</label>
+                  <textarea name="description" placeholder="Objetivo, material, sensaciones previstas"></textarea>
+
                   <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-                    <button id="create-class-btn" class="btn btn-primary" type="submit">Crear clase</button>
-                    <span id="create-class-msg" style="color:#0f7b3c; font-weight:700;"></span>
+                    <button class="btn btn-primary" type="submit">Crear clase</button>
+                    <span id="trainer-create-msg" style="color:#0f7b3c; font-weight:700;"></span>
                   </div>
-                  <div id="create-class-error" class="error"></div>
                 </form>
               </div>
 
-              <div class="card" style="grid-column: span 5;">
-                <div class="kicker">Acciones rápidas</div>
-                <div class="stats">
-                  <div class="stat">
-                    <div class="num">7</div>
-                    <div class="lbl">check-ins pendientes</div>
-                  </div>
-                  <div class="stat">
-                    <div class="num">2</div>
-                    <div class="lbl">listas de espera</div>
-                  </div>
-                </div>
-                <div class="mtop" style="display:flex; gap:10px; flex-wrap:wrap;">
-                  <button class="btn btn-primary" disabled>Escanear QR</button>
-                  <button class="btn btn-ghost" disabled>Incidencia</button>
-                </div>
-              </div>
-
               <div class="card" style="grid-column: span 12;">
-                <div class="kicker">Notas</div>
-                <p class="sub" style="margin-top:6px;">
-                  Idea: aquí puedes mostrar asistentes por clase, toggles para presente/ausente, y un resumen al finalizar.
-                </p>
+                <div class="kicker" id="trainer-res-title">Reservas de clase</div>
+                <div class="dim" id="trainer-res-status">Selecciona una clase para ver asistentes.</div>
+                <ul class="list" id="trainer-reservations" style="margin-top:10px;"></ul>
               </div>
             </div>
           </div>

@@ -2,6 +2,7 @@ import { Navbar } from "../components/Navbar.js";
 import { authStore } from "../state/authStore.js";
 import { authService } from "../services/authService.js";
 import { navigate } from "../router.js";
+import { gymService } from "../services/gymService.js";
 
 export async function MemberDashboard() {
   const me = await authService.loadSession().catch(() => authStore.me);
@@ -21,64 +22,137 @@ export async function MemberDashboard() {
     me?.email ||
     "Socio";
 
-  const featuredClasses = [
-    {
-      title: "Fuerza & Core",
-      time: "Hoy · 18:00 · Sala 2",
-      capacity: 20,
-      booked: 18,
-      description: "Circuito full-body con barra y trabajo de core para estabilidad.",
-    },
-    {
-      title: "HIIT Neon",
-      time: "Hoy · 19:00 · Zona cardio",
-      capacity: 16,
-      booked: 15,
-      description: "Intervalos cortos y explosivos. Ideal para quemar y subir pulsaciones.",
-    },
-    {
-      title: "Mobility Reset",
-      time: "Mañana · 08:00 · Sala 1",
-      capacity: 14,
-      booked: 10,
-      description: "Movilidad articular y estiramientos guiados para desbloquear tu semana.",
-    },
-  ];
+  const heroImages = {
+    crossfit: "https://images.unsplash.com/photo-1554344058-8d1d1bcdfaf8?auto=format&fit=crop&w=1200&q=80",
+    hiit: "https://images.unsplash.com/photo-1556817411-31ae72fa3ea0?auto=format&fit=crop&w=1200&q=80",
+    mobility: "https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?auto=format&fit=crop&w=1200&q=80",
+    spinning: "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?auto=format&fit=crop&w=1200&q=80",
+    cycling: "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?auto=format&fit=crop&w=1200&q=80",
+    strength: "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=1200&q=80",
+  };
+  const imgForType = (type) => heroImages[String(type || "").toLowerCase()] || heroImages.strength;
 
-  const classCards = featuredClasses
-    .map((item) => {
-      const occupancy = Math.min(
-        100,
-        Math.round((item.booked / item.capacity) * 100)
-      );
-      const full = item.booked >= item.capacity;
-      const statusLabel = full
-        ? "Completa"
-        : `Quedan ${item.capacity - item.booked} plazas`;
-      const statusClass = full ? "badge red" : "badge green";
+  const classTypes = await gymService.listClassTypes().catch(() => []);
+  const classes = await gymService.listClasses().catch(() => []);
 
-      return `
-        <div class="card" style="display:flex; flex-direction:column; gap:10px;">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
-            <div>
-              <div style="font-weight:1000; font-size:18px;">${item.title}</div>
-              <div class="dim">${item.time}</div>
-            </div>
-            <span class="${statusClass}">${statusLabel}</span>
+  const fmtDate = (iso) =>
+    new Date(iso).toLocaleString("es-ES", {
+      weekday: "short",
+      day: "2-digit",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+  const renderCard = (cls) => {
+    const full = Number(cls.booked_count || 0) >= Number(cls.capacity);
+    const occupancy = cls.capacity
+      ? Math.round(((cls.booked_count || 0) / cls.capacity) * 100)
+      : 0;
+    return `
+      <article class="class-card" data-class-id="${cls.id}">
+        <div class="backdrop" style="background-image:url('${imgForType(cls.class_type_name)}')"></div>
+        <div class="tag ${full ? "red" : "green"}">${cls.class_type_name || "Clase"}</div>
+        <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
+          <div>
+            <div style="font-weight:1000; font-size:18px;">${fmtDate(cls.starts_at)}</div>
+            <div class="dim">${cls.location || "Centro"} · ${
+      cls.instructor_name ? `Coach ${cls.instructor_name}` : "Coach por asignar"
+    }</div>
           </div>
-          <p class="sub" style="margin:4px 0;">${item.description}</p>
-          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-            <span class="pill">
-              <span class="dot ${full ? "off" : ""}"></span>
-              Aforo ${item.booked}/${item.capacity} (${occupancy}%)
-            </span>
-            <button class="btn btn-primary" disabled>Reservar</button>
-            <button class="btn btn-ghost" disabled>Detalles</button>
-          </div>
+          <span class="badge ${full ? "red" : "green"}">
+            ${full ? "Completa" : `${cls.capacity - (cls.booked_count || 0)} libres`}
+          </span>
         </div>
-      `;
-    })
-    .join("");
+        ${cls.description ? `<p class="sub" style="margin:6px 0; color:#e8edf6;">${cls.description}</p>` : ""}
+        <div class="pill" style="background: rgba(255,255,255,.08); border-color: var(--border);">
+          <span class="dot ${full ? "off" : ""}"></span>
+          Aforo ${cls.booked_count || 0}/${cls.capacity} (${occupancy}%)
+        </div>
+        <div class="mtop" style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn btn-primary" data-action="reserve" data-id="${cls.id}" ${full ? "disabled" : ""}>Reservar</button>
+          <button class="btn btn-ghost" data-action="cancel" data-id="${cls.id}">Cancelar mi reserva</button>
+        </div>
+        <div class="dim" id="member-msg-${cls.id}"></div>
+      </article>
+    `;
+  };
+
+  const initialCards = classes.length
+    ? classes.map(renderCard).join("")
+    : "<p class='sub'>No hay clases próximas.</p>";
+
+  // Hook de eventos y recargas una vez renderizado el DOM
+  setTimeout(() => {
+    const listEl = document.querySelector("#member-classes");
+    const statusEl = document.querySelector("#member-status");
+    const refreshBtn = document.querySelector("#member-refresh");
+    let currentClasses = classes.slice();
+
+    const render = (items) => {
+      if (!listEl) return;
+      if (!items.length) {
+        listEl.innerHTML = "<p class='sub'>No hay clases próximas.</p>";
+        return;
+      }
+      listEl.innerHTML = items.map(renderCard).join("");
+    };
+
+    const setStatus = (txt, isError = false) => {
+      if (!statusEl) return;
+      statusEl.textContent = txt;
+      statusEl.style.color = isError ? "#b42318" : "var(--muted)";
+    };
+
+    const load = async () => {
+      setStatus("Cargando clases...");
+      try {
+        const data = await gymService.listClasses();
+        currentClasses = data;
+        render(currentClasses);
+        setStatus(`Mostrando ${currentClasses.length} clases.`);
+      } catch (err) {
+        console.error(err);
+        setStatus(err.message || "No se pudieron cargar las clases.", true);
+      }
+    };
+
+    refreshBtn?.addEventListener("click", () => load());
+
+    listEl?.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-action]");
+      if (!btn) return;
+      const id = Number(btn.dataset.id);
+      const action = btn.dataset.action;
+      const msgEl = document.querySelector(`#member-msg-${id}`);
+
+      const toggle = (isLoading, label) => {
+        btn.disabled = isLoading;
+        if (!btn.dataset.label) btn.dataset.label = btn.textContent;
+        btn.textContent = isLoading ? label : btn.dataset.label;
+      };
+
+      try {
+        if (action === "reserve") {
+          toggle(true, "Reservando...");
+          await gymService.reserveClass(id);
+          if (msgEl) msgEl.textContent = "Reserva confirmada.";
+        }
+        if (action === "cancel") {
+          toggle(true, "Cancelando...");
+          await gymService.cancelReservation(id);
+          if (msgEl) msgEl.textContent = "Reserva cancelada.";
+        }
+        await load(); // refresca aforo
+      } catch (err) {
+        if (msgEl) msgEl.textContent = err.message || "Error al procesar.";
+      } finally {
+        toggle(false);
+      }
+    });
+
+    render(currentClasses);
+  }, 0);
 
   return `
     <div class="bg-blobs"></div>
@@ -88,54 +162,19 @@ export async function MemberDashboard() {
       <main class="container">
         <section class="hero">
           <div class="card" style="display:flex; flex-direction:column; gap:16px;">
-            <div class="kicker">ÁREA SOCIO</div>
+            <div class="kicker">RESERVA DE CLASES</div>
             <h2 class="h2">Hola, ${name}</h2>
-            <p class="sub">Tu resumen rápido de clases, aforo y acciones directas.</p>
+            <p class="sub">Elige tu clase y reserva en un click. Sin buscador: todo lo próximo ya está aquí.</p>
 
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:12px;">
-              <div class="card" style="background: var(--surface-2); border-color: var(--border); box-shadow:none;">
-                <div class="kicker">Próxima clase</div>
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
-                  <div>
-                    <div style="font-weight:1000; font-size:18px;">Fuerza & Core</div>
-                    <div class="dim">Hoy · 18:00 · Sala 2</div>
-                  </div>
-                  <span class="badge">Reservada</span>
-                </div>
-                <div class="mtop" style="display:flex; gap:10px; flex-wrap:wrap;">
-                  <button class="btn btn-primary" disabled>Check-in</button>
-                  <button class="btn btn-ghost" disabled>Cancelar</button>
-                </div>
-                <div class="footer">Conecta aquí el endpoint de reservas para activar botones.</div>
-              </div>
-
-              <div class="card" style="background: var(--surface-2); border-color: var(--border); box-shadow:none;">
-                <div class="kicker">Aforo en vivo</div>
-                <div class="stats">
-                  <div class="stat">
-                    <div class="num">63%</div>
-                    <div class="lbl">ocupación actual</div>
-                  </div>
-                  <div class="stat">
-                    <div class="num">12</div>
-                    <div class="lbl">clases esta semana</div>
-                  </div>
-                  <div class="stat">
-                    <div class="num">4</div>
-                    <div class="lbl">reservas activas</div>
-                  </div>
-                  <div class="stat">
-                    <div class="num">9</div>
-                    <div class="lbl">asistencias mes</div>
-                  </div>
-                </div>
-              </div>
+            <div class="card" style="background: var(--surface-2); border-color: var(--border); box-shadow:none; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+              <div class="dim" id="member-status">Conectado al servicio de clases.</div>
+              <button class="btn btn-primary" type="button" id="member-refresh">Actualizar</button>
             </div>
 
             <div class="card" style="background: var(--surface-2); border-color: var(--border); box-shadow:none;">
-              <div class="kicker">Clases destacadas</div>
-              <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:12px; margin-top:10px;">
-                ${classCards}
+              <div class="kicker">Clases disponibles</div>
+              <div id="member-classes" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:12px; margin-top:12px;">
+                ${initialCards}
               </div>
             </div>
           </div>

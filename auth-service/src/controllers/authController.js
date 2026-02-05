@@ -5,6 +5,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'smartgym_secret_key_2024_tfg';
 const JWT_EXPIRES_IN = '24h';
 const ALLOWED_EMAIL_PROVIDERS = ['gmail', 'outlook', 'yahoo'];
 
+// Normaliza números de teléfono españoles a formato +34 XXXXXXXXX
 function normalizeEsPhone(value = '') {
     const digits = String(value || '').replace(/[^\d]/g, '');
     if (!digits) return null;
@@ -17,6 +18,7 @@ function normalizeEsPhone(value = '') {
     return local ? `+34 ${local}` : '+34';
 }
 
+// Verifica si el email pertenece a un proveedor permitido ('gmail', 'outlook', 'yahoo')
 function isAllowedEmailProvider(email = '') {
     const domain = String(email).toLowerCase().trim().split('@')[1];
     if (!domain) return false;
@@ -25,6 +27,7 @@ function isAllowedEmailProvider(email = '') {
 }
 
 class AuthController {
+    // Registro de usuario
     static async register(req, res) {
         try {
             const { email, password, firstName, lastName, phone, birthDate,
@@ -121,6 +124,7 @@ class AuthController {
         }
     }
 
+    // Login de usuario
     static async login(req, res) {
         try {
             const { email, password } = req.body;
@@ -177,6 +181,7 @@ class AuthController {
         }
     }
 
+    // Obtener perfil de usuario
     static async getProfile(req, res) {
         try {
             const user = await User.findById(req.userId);
@@ -215,6 +220,7 @@ class AuthController {
         }
     }
 
+    // Logout de usuario (simulado)
     static async logout(req, res) {
         try {
             res.json({
@@ -229,6 +235,7 @@ class AuthController {
         }
     }
 
+    // Actualizar perfil de usuario
     static async updateProfile(req, res) {
         try {
             const {
@@ -285,6 +292,7 @@ class AuthController {
         }
     }
 
+    // Crear usuario staff (entrenador o admin) - solo para admin
     static async createStaff(req, res) {
         try {
             const {
@@ -307,7 +315,7 @@ class AuthController {
             });
             }
 
-            // Solo permitimos crear staff (trainer o admin si quieres)
+            // Solo permitimos crear staff (entrenador o admin)
             const finalRole = role === 'admin' ? 'admin' : 'trainer';
 
             const name = `${firstName} ${lastName}`.trim();

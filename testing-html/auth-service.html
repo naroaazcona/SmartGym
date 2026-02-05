@@ -120,6 +120,17 @@
                 <h4>🔑 Token JWT Obtenido:</h4>
                 <div id="token-display" class="token-display"></div>
             </div>
+
+            <h3>👷 Área Admin: Crear entrenador</h3>
+            <input id="t_firstName" placeholder="Nombre" />
+            <input id="t_lastName" placeholder="Apellidos" />
+            <input id="t_email" placeholder="Email" />
+            <input id="t_phone" placeholder="Teléfono (opcional)" />
+            <input id="t_password" placeholder="Password" type="password" />
+
+            <button onclick="createTrainer()">Crear entrenador</button>
+
+            <pre id="createTrainerResult"></pre>
         </div>
 
         <!-- Profile Section -->
@@ -463,6 +474,7 @@ ${res.status === 400 ? '✅ Validación de campos requeridos funcionando' : ''}
 ${res.status === 500 ? '❌ Error interno en base de datos o JWT' : ''}
                 `;
                 printResult(els.loginResult, errorAnalysis, false);
+                localStorage.setItem('auth_role', data.user.role);
             }
         } catch (err) {
             printResult(els.loginResult, `❌ ERROR: ${err.message}`, false);
@@ -578,6 +590,8 @@ ${res.status === 500 ? '❌ Error interno en base de datos o middleware' : ''}
     window.getProfile = getProfile;
     window.clearToken = clearToken;
     window.updateProfile = updateProfile;
+    window.createTrainer = createTrainer;
+    window.logout = logout;
 
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -751,6 +765,37 @@ ${JSON.stringify(data, null, 2)}
   } catch (err) {
     printResult(els.updateProfileResult, `❌ ERROR: ${err.message}`, false);
   }
+}
+
+async function createTrainer() {
+  const token = getToken(); // ✅ usa auth_token
+  if (!token) {
+    document.getElementById('createTrainerResult').textContent =
+      '❌ No hay token. Inicia sesión como admin primero.';
+    return;
+  }
+
+  const body = {
+    firstName: document.getElementById('t_firstName').value.trim(),
+    lastName: document.getElementById('t_lastName').value.trim(),
+    email: document.getElementById('t_email').value.trim(),
+    phone: document.getElementById('t_phone').value.trim() || null,
+    password: document.getElementById('t_password').value,
+    role: 'trainer'
+  };
+
+  const res = await fetch(`${BASE_URL}/staff`, {  // ✅ usa BASE_URL
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}` // ✅ token correcto
+    },
+    body: JSON.stringify(body)
+  });
+
+  const data = await res.json().catch(() => ({}));
+  document.getElementById('createTrainerResult').textContent =
+    JSON.stringify({ status: res.status, data }, null, 2);
 }
 
     </script>
