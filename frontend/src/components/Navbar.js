@@ -6,13 +6,6 @@ export function Navbar() {
   const role = authStore.role;
   const isOnline = Boolean(authStore.token);
 
-  const session = isOnline ? "Online" : "Offline";
-  const dot = isOnline
-    ? `<span class="dot"></span>`
-    : `<span class="dot off"></span>`;
-
-  const roleLabel = isOnline ? `<b>${role ?? "member"}</b>` : "Invitado";
-
   // delegación segura
   setTimeout(() => {
     document.querySelector(".navbar")?.addEventListener("click", async (e) => {
@@ -35,7 +28,6 @@ export function Navbar() {
           </a>
 
           <div class="navlinks">
-            <span class="pill">${dot} ${session} · ${roleLabel}</span>
             <a class="linkbtn" href="#/">Inicio</a>
             ${!isOnline ? `<a class="linkbtn" href="#/login">Acceder</a>` : ``}
             ${role === "member" ? `<a class="linkbtn" href="#/member">Reservas</a>` : ``}

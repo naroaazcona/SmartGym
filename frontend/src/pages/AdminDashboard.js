@@ -22,12 +22,12 @@ export async function AdminDashboard() {
   const classes = await gymService.listClasses().catch(() => []);
 
   const heroImages = {
-    crossfit: "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=1200&q=80",
-    hiit: "https://images.unsplash.com/photo-1556817411-31ae72fa3ea0?auto=format&fit=crop&w=1200&q=80",
-    mobility: "https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?auto=format&fit=crop&w=1200&q=80",
-    spinning: "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?auto=format&fit=crop&w=1200&q=80",
-    cycling: "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?auto=format&fit=crop&w=1200&q=80",
-    strength: "https://images.unsplash.com/photo-1554344058-8d1d1bcdfaf8?auto=format&fit=crop&w=1200&q=80",
+    crossfit: "https://images.unsplash.com/photo-1558611848-73f7eb4001a1?auto=format&fit=crop&w=1400&q=80",
+    hiit: "https://images.unsplash.com/photo-1554284126-aa88f22d8b74?auto=format&fit=crop&w=1400&q=80",
+    mobility: "https://images.unsplash.com/photo-1546484959-f9a9c6c4b4c1?auto=format&fit=crop&w=1400&q=80",
+    spinning: "https://images.unsplash.com/photo-1546484475-7e0b1cd5a33e?auto=format&fit=crop&w=1400&q=80",
+    cycling: "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?auto=format&fit=crop&w=1400&q=80",
+    strength: "https://images.unsplash.com/photo-1483721310020-03333e577078?auto=format&fit=crop&w=1400&q=80",
   };
 
   const imgForType = (type) => heroImages[String(type || "").toLowerCase()] || heroImages.strength;
@@ -57,7 +57,7 @@ export async function AdminDashboard() {
             ${full ? "Completa" : `${cls.capacity - (cls.booked_count || 0)} libres`}
           </span>
         </div>
-        ${cls.description ? `<p class="sub" style="margin:6px 0 4px; color:#e8edf6;">${cls.description}</p>` : ""}
+        ${cls.description ? `<p class="sub" style="margin:6px 0 4px; color:#0b0f19;">${cls.description}</p>` : ""}
         <div class="chip-row">
           <span class="chip">${cls.booked_count || 0} reservas</span>
           <span class="chip">Tipo ${cls.class_type_name || "-"}</span>
@@ -247,7 +247,7 @@ export async function AdminDashboard() {
             <div class="admin-hero">
               <div class="floating-stat"><span class="lbl">Clases</span><span class="val">${classes.length}</span></div>
               <div class="floating-stat"><span class="lbl">Tipos disponibles</span><span class="val">${classTypes.length}</span></div>
-              <div class="floating-stat"><span class="lbl">Sesión</span><span class="val">${isOnline ? "Online" : "Demo"}</span></div>
+              <div class="floating-stat"><span class="lbl">Sesión</span><span class="val">${isOnline ? "Activa" : "Inicia sesión"}</span></div>
             </div>
 
             <div class="admin-grid">

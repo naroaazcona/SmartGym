@@ -5,7 +5,7 @@ const cors = require("cors");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// URLs configurables: en LOCAL usa localhost, en Docker puedes sobreescribir por env
+// URLs configurables: en LOCAL usa localhost
 const AUTH_URL = process.env.AUTH_URL || "http://127.0.0.1:3001";
 const GYM_URL = process.env.GYM_URL || "http://127.0.0.1:3002";
 const TRAINING_URL = process.env.TRAINING_URL || "http://127.0.0.1:5000";
@@ -32,20 +32,19 @@ app.use(
     logLevel: "debug",
 
     onProxyReq: (proxyReq, req) => {
-      console.log("➡️  [AUTH]", req.method, req.originalUrl, "->", proxyReq.path);
+      console.log("[AUTH]", req.method, req.originalUrl, "->", proxyReq.path);
     },
     onProxyRes: (proxyRes, req) => {
-      console.log("✅ [AUTH RES]", req.method, req.originalUrl, "STATUS", proxyRes.statusCode);
+      console.log("[AUTH RES]", req.method, req.originalUrl, "STATUS", proxyRes.statusCode);
     },
     onError: (err, req, res) => {
-      console.error("❌ [AUTH PROXY ERROR]", err.code || "", err.message);
+      console.error("[AUTH PROXY ERROR]", err.code || "", err.message);
       if (!res.headersSent) {
         res.status(502).json({ error: "Bad gateway", code: err.code, message: err.message });
       }
     },
   })
 );
-
 
 // Gym: /gym/... -> GYM_URL/...
 app.use(

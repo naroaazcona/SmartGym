@@ -99,7 +99,6 @@ export async function ProfilePage() {
     .toUpperCase();
 
   const metrics = [
-    { label: "Rol", value: prettyRole(me.role || "member"), icon: "🛡️", tone: "blue" },
     { label: "Altura", value: profile.heightCm ? `${profile.heightCm} cm` : "-", icon: "📏", tone: "yellow" },
     { label: "Peso", value: profile.weightKg ? `${profile.weightKg} kg` : "-", icon: "⚖️", tone: "red" },
     { label: "Género", value: prettyGender(profile.gender), icon: "🧬", tone: "green" },
@@ -208,7 +207,6 @@ export async function ProfilePage() {
               </div>
 
               <div class="profile-chips">
-                <span class="profile-chip">🛡️ <span class="mini">Rol</span> <b>${prettyRole(me.role || "member")}</b></span>
                 <span class="profile-chip" data-profile-phone>📞 <span class="mini">Tel</span> <b>${phoneDisplay}</b></span>
               </div>
 
@@ -220,7 +218,6 @@ export async function ProfilePage() {
             <section class="profile-card">
               <div class="profile-section-title">
                 <h3>Resumen</h3>
-                <span class="profile-badge badge yellow">⚡ SmartGym</span>
               </div>
 
               <div class="kv-grid">
@@ -234,7 +231,6 @@ export async function ProfilePage() {
 
               <div class="profile-section-title" style="margin-top:4px;">
                 <h3>Editar perfil</h3>
-                <span class="profile-badge badge blue">🧪 Datos</span>
               </div>
 
               <form id="profile-form" class="form profile-form">
