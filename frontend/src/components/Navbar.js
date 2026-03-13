@@ -23,7 +23,7 @@ export function Navbar() {
           <a class="brand" href="#/">
             <div class="logo">SG</div>
             <div class="brand-title">
-              <span class="name">SmartGym</span>
+              <span class="name">Smart<span class="accent">Gym</span></span>
             </div>
           </a>
 

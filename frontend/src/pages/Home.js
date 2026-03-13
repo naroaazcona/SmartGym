@@ -110,20 +110,6 @@ export async function HomePage() {
       tip: "4 bloques 40/20 + 10' movilidad.",
       img: "https://images.unsplash.com/photo-1521805103424-d8f8430e8933?auto=format&fit=crop&w=1400&q=80",
     },
-    {
-      title: "Dieta flex",
-      focus: "300 kcal déficit",
-      time: "Plan semanal",
-      tip: "30/30/40 proteína/grasas/carbs.",
-      img: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1400&q=80",
-    },
-    {
-      title: "Post-entreno",
-      focus: "Recuperación",
-      time: "Snack",
-      tip: "20-30g proteína + fruta.",
-      img: "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=1400&q=80",
-    },
   ];
 
   /* === Render helpers === */
@@ -289,9 +275,10 @@ export async function HomePage() {
               <div class="kicker">SmartGym · Real training club</div>
               <h1 class="h1">Clases, aforo en vivo y reservas en un click</h1>
               <p class="sub lead">Visualiza la sala, siente el ambiente y entra directo.</p>
+              ${!isOnline ? `
               <div class="cta-row">
                 <button class="btn btn-primary js-go-area">Entrar ahora</button>
-              </div>
+              </div>` : ""}
             </div>
 
             <div class="hero-visual">
@@ -312,9 +299,9 @@ export async function HomePage() {
           </div>
 
           <div class="panel-card">
-            <div class="label">Rutinas & dieta</div>
+            <div class="label">Rutinas</div>
             <h3>Ideas rápidas para hoy</h3>
-            <p class="sub">Combina clases con planes cortos de entrenamiento y nutrición.</p>
+            <p class="sub">Combina clases con planes cortos de entrenamiento.</p>
             <div class="class-gallery" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
               ${planCards}
             </div>

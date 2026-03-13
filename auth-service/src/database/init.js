@@ -2,56 +2,56 @@ const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
 
-console.log('Iniciando inicialización de la base de datos...');
+console.log('Iniciando la base de datos...');
 
 const pool = new Pool({
-  user: 'admin',
-  host: 'auth-db',
-  database: 'auth_db',
-  password: 'password',
-  port: 5432,
+  user: process.env.DB_USER || 'admin',
+  host: process.env.DB_HOST || 'auth-db',
+  database: process.env.DB_NAME || 'auth_db',
+  password: process.env.DB_PASSWORD,
+  port: process.env.DB_PORT || 5432,
 });
 
 async function initializeDatabase() {
   let client;
-  try {
-    console.log('Conectando a PostgreSQL...');
-    client = await pool.connect();
-    
-    // Verificar si init.sql existe
-    const initSqlPath = path.join(__dirname, 'init.sql');
-    if (!fs.existsSync(initSqlPath)) {
-      throw new Error('init.sql no encontrado en: ' + initSqlPath);
-    }
-    
-    // Leer y ejecutar el archivo init.sql
-    console.log('Leyendo init.sql...');
-    const sqlScript = fs.readFileSync(initSqlPath, 'utf8');
-    
-    console.log('Ejecutando script SQL...');
-    await client.query(sqlScript);
-    
-    console.log('Base de datos inicializada correctamente desde init.sql!');
+  const maxRetries = 10;
+  const retryDelay = 3000;
 
-  } catch (error) {
-    console.error('Error inicializando la base de datos:', error.message);
-    
-    // Mostrar archivos en el directorio para debug
+  for (let i = 1; i <= maxRetries; i++) {
     try {
-      const files = fs.readdirSync(__dirname);
-      console.log('Archivos en database/:', files);
-    } catch (e) {
-      console.log('No se pudo leer el directorio database/');
+      console.log(`Conectando a PostgreSQL... (intento ${i}/${maxRetries})`);
+      client = await pool.connect();
+
+      const initSqlPath = path.join(__dirname, 'init.sql');
+      if (!fs.existsSync(initSqlPath)) {
+        throw new Error('init.sql no encontrado en: ' + initSqlPath);
+      }
+
+      console.log('Leyendo init.sql...');
+      const sqlScript = fs.readFileSync(initSqlPath, 'utf8');
+
+      console.log('Ejecutando script SQL...');
+      await client.query(sqlScript);
+
+      console.log('Base de datos inicializada correctamente desde init.sql!');
+      break;
+
+    } catch (error) {
+      console.error(`Error en intento ${i}:`, error.message);
+      if (client) { client.release(); client = null; }
+      if (i < maxRetries) {
+        console.log(`Reintentando en ${retryDelay / 1000}s...`);
+        await new Promise(res => setTimeout(res, retryDelay));
+      } else {
+        console.error('No se pudo inicializar la base de datos tras varios intentos.');
+      }
     }
-  } finally {
-    if (client) {
-      client.release();
-    }
-    await pool.end();
   }
+
+  if (client) client.release();
+  await pool.end();
 }
 
-// Ejecutar solo si es el script principal
 if (require.main === module) {
   initializeDatabase();
 }

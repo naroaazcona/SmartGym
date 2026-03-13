@@ -1,6 +1,5 @@
 import { Navbar } from "../components/Navbar.js";
 import { authService } from "../services/authService.js";
-import { authStore } from "../state/authStore.js";
 import { navigate } from "../router.js";
 
 const ALLOWED_EMAIL_PROVIDERS = ["gmail", "outlook", "yahoo"];
@@ -53,14 +52,6 @@ const friendlyError = (ex, fallback) => {
   return msg || fallback;
 };
 
-function goToRole(me) {
-  const role = me?.role || authStore.role;
-  if (role === "admin") return navigate("/admin");
-  if (role === "trainer") return navigate("/trainer");
-  if (role === "member") return navigate("/member");
-  return navigate("/");
-}
-
 export async function LoginPage() {
   setTimeout(() => {
     const tabs = document.querySelectorAll("[data-auth-tab]");
@@ -112,10 +103,10 @@ export async function LoginPage() {
       setLoading(loginBtn, true, "Entrando...");
 
       try {
-        const me = await authService.login(email, password);
+        await authService.login(email, password);
         loginFailures = 0;
         cooldownUntil = 0;
-        goToRole(me);
+        navigate("/");
       } catch (ex) {
         loginFailures += 1;
         if (loginFailures >= 3) {
@@ -159,9 +150,9 @@ export async function LoginPage() {
       setLoading(registerBtn, true, "Creando...");
 
       try {
-        const res = await authService.register(payload);
-        const me = res?.user || authStore.me;
-        goToRole(me);
+        await authService.register(payload);
+        // Nuevo usuario -> onboarding de preferencias
+        navigate("/onboarding");
       } catch (ex) {
         if (registerError) registerError.textContent = friendlyError(ex, "Error al registrar. Revisa los datos.");
       } finally {

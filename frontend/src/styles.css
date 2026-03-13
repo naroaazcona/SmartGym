@@ -180,10 +180,8 @@ button{ font:inherit; cursor:pointer; }
   font-size: 18px;
   text-transform: uppercase;
 }
-.brand-title .tag{
-  font-size: 12px;
-  color: var(--muted);
-  letter-spacing: .08em;
+.brand-title .name .accent{
+  color: #ff7a59 !important;
 }
 
 .pill{
@@ -225,13 +223,10 @@ button{ font:inherit; cursor:pointer; }
   color: var(--muted);
   font-weight: 800;
   letter-spacing: .2px;
-  transition: transform .12s ease, background .12s ease, border-color .12s ease, color .12s ease;
+  transition: transform .12s ease;
 }
 .linkbtn:hover{
-  transform: translateY(-1px);
-  background: rgba(15,24,40,.05);
-  border-color: var(--border);
-  color: var(--ink);
+  transform: scale(1.06);
 }
 .linkbtn.active{ color:var(--ink); border-color: var(--border); background: rgba(15,24,40,.06); }
 
@@ -1052,13 +1047,22 @@ body::after{
 }
 .brand{ gap:10px; }
 .brand-title .name{
-  letter-spacing:.22em; font-size:32px; text-transform:uppercase;
+  position: relative;
+  display:inline-flex;
+  align-items:flex-end;
+  gap: 4px;
+  letter-spacing:.16em; font-size:36px; text-transform:uppercase;
   font-weight:900; color:var(--ink);
-  text-shadow:0 6px 18px rgba(92,123,255,.18);
-  transition: transform .22s ease, text-shadow .22s ease;
+  text-shadow:0 8px 20px rgba(92,123,255,.20);
+  transition: transform .22s ease, text-shadow .22s ease, letter-spacing .22s ease;
+}
+.brand-title .name .accent{
+  color:#ff7a59 !important;
+  text-shadow:0 0 16px rgba(255,122,89,.36), 0 8px 18px rgba(13,26,45,.18);
 }
 .brand:hover .brand-title .name{
-  transform: scale(1.06);
+  transform: scale(1.07);
+  letter-spacing:.2em;
   text-shadow:0 10px 24px rgba(40,205,180,.24);
 }
 
@@ -1075,26 +1079,14 @@ body::after{
   background:transparent; color:var(--muted); font-weight:700; text-transform:uppercase;
   position:relative;
   overflow:hidden;
-  transition: background .18s ease, color .18s ease, border-color .18s ease, transform .18s ease;
-}
-.linkbtn::after{
-  content:"";
-  position:absolute;
-  left:0; right:0; bottom:6px;
-  height:3px;
-  background:linear-gradient(90deg, rgba(40,205,180,.8), rgba(92,123,255,.9));
-  transform:scaleX(0);
-  transform-origin: center;
   transition: transform .18s ease;
 }
 .linkbtn:hover{
-  color:var(--ink); border-color:rgba(13,26,45,0.12); background:rgba(92,123,255,.12); transform:translateY(-1px);
+  transform: scale(1.06);
 }
-.linkbtn:hover::after{ transform:scaleX(1); }
 .linkbtn.active{
   color:var(--ink); border-color:rgba(13,26,45,0.18); background:rgba(92,123,255,.16);
 }
-.linkbtn.active::after{ transform:scaleX(1); }
 
 .pill{
   display:inline-flex; align-items:center; gap:10px;
@@ -1231,4 +1223,80 @@ input:focus, select:focus, textarea:focus{
   0%{ filter:brightness(1) saturate(1); }
   50%{ filter:brightness(1.05) saturate(1.08); }
   100%{ filter:brightness(1) saturate(1); }
+}
+
+/* MEMBER DASHBOARD VISUAL PRIORITY */
+.member-class-card{
+  opacity: 0;
+  transform: translateY(12px) scale(.99);
+  transition: opacity .32s ease, transform .32s ease, box-shadow .24s ease;
+  border-left: 4px solid transparent;
+}
+.member-class-card.is-visible{
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.member-class-card.member-demand-low{
+  border-left-color: rgba(40,205,180,.9);
+}
+.member-class-card.member-demand-medium{
+  border-left-color: rgba(253,188,46,.92);
+}
+.member-class-card.member-demand-high{
+  border-left-color: rgba(255,122,89,.92);
+  box-shadow: 0 18px 34px rgba(255,122,89,.22);
+}
+
+.member-demand-badge{
+  display:inline-flex;
+  align-items:center;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.75);
+}
+.member-demand-badge.member-demand-low{
+  color:#0d6152;
+  border-color: rgba(40,205,180,.45);
+  background: rgba(40,205,180,.17);
+}
+.member-demand-badge.member-demand-medium{
+  color:#6d4f0c;
+  border-color: rgba(253,188,46,.45);
+  background: rgba(253,188,46,.2);
+}
+.member-demand-badge.member-demand-high{
+  color:#8a2e1a;
+  border-color: rgba(255,122,89,.45);
+  background: rgba(255,122,89,.2);
+}
+
+.member-demand-legend{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+.member-rec-card{
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity .3s ease, transform .3s ease;
+}
+.member-rec-card.is-visible{
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce){
+  .member-class-card,
+  .member-rec-card{
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }

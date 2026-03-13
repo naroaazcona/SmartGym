@@ -1,5 +1,6 @@
 import { CONFIG } from "../config.js";
 import { authStore } from "../state/authStore.js";
+import { navigate } from "../router.js";
 
 export async function apiFetch(path, { method="GET", headers={}, body } = {}) {
   const url = `${CONFIG.API_BASE}${path}`;
@@ -19,8 +20,16 @@ export async function apiFetch(path, { method="GET", headers={}, body } = {}) {
   const text = await res.text();
   const data = text ? (() => { try { return JSON.parse(text); } catch { return { raw: text }; } })() : null;
 
+  // Si el token ha expirado o es inválido, cerrar sesión y redirigir al login
+  if (res.status === 401 || res.status === 403) {
+    authStore.logout();
+    navigate("/login");
+    throw new Error("Tu sesión ha expirado. Por favor inicia sesión de nuevo.");
+  }
+
   if (!res.ok) {
     throw new Error(data?.message || data?.error || `Error ${res.status}`);
   }
+
   return data;
 }

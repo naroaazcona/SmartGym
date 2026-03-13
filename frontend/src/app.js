@@ -3,6 +3,7 @@ import { authService } from "./services/authService.js";
 
 import { HomePage } from "./pages/Home.js";
 import { LoginPage } from "./pages/Login.js";
+import { OnboardingPage } from "./pages/Onboarding.js";
 import { MemberDashboard } from "./pages/MemberDashboard.js";
 import { TrainerDashboard } from "./pages/TrainerDashboard.js";
 import { AdminDashboard } from "./pages/AdminDashboard.js";
@@ -12,6 +13,7 @@ import { NotFoundPage } from "./pages/NotFound.js";
 
 registerRoute("/", HomePage);
 registerRoute("/login", LoginPage);
+registerRoute("/onboarding", OnboardingPage);
 registerRoute("/perfil", ProfilePage);
 registerRoute("/member", MemberDashboard);
 registerRoute("/mis-reservas", MyReservationsPage);

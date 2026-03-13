@@ -1,0 +1,20 @@
+      const btn = typeSeedBtn;
+      const toggle = (isLoading, label) => {
+        btn.disabled = isLoading;
+        if (!btn.dataset.label) btn.dataset.label = btn.textContent;
+        btn.textContent = isLoading ? label : btn.dataset.label;
+      };
+      try {
+        toggle(true, "Añadiendo...");
+        const existingNames = new Set((currentTypes || []).map((t) => t.name.toLowerCase()));
+        for (const t of recommendedTypes) { {
+          if (existingNames.has(t.name.toLowerCase())) continue;
+          await gymService.createClassType(t);
+        }
+        const updated = await gymService.listClassTypes();
+        currentTypes = updated;
+        renderTypes(updated);
+        if (typeMsg) typeMsg.textContent = "Tipos cargados.";
+      } catch (err) {
+        if (typeMsg) typeMsg.textContent = err.message || "No se pudieron crear los tipos.";
+      } finally {

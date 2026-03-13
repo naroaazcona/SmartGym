@@ -2,40 +2,46 @@ const fs = require('fs');
 const path = require('path');
 const pool = require('./db');
 
-console.log('Iniciando inicialización de la base de datos (gym-service)...');
+console.log('Iniciando la base de datos (gym-service)...');
 
 async function initializeDatabase() {
   let client;
-  try {
-    console.log('Conectando a PostgreSQL...');
-    client = await pool.connect();
+  const maxRetries = 10;
+  const retryDelay = 3000;
 
-    const initSqlPath = path.join(__dirname, 'init.sql');
-    if (!fs.existsSync(initSqlPath)) {
-      throw new Error('init.sql no encontrado en: ' + initSqlPath);
-    }
-
-    console.log('Leyendo init.sql...');
-    const sqlScript = fs.readFileSync(initSqlPath, 'utf8');
-
-    console.log('Ejecutando script SQL...');
-    await client.query(sqlScript);
-
-    console.log('Base de datos inicializada correctamente desde init.sql!');
-  } catch (error) {
-    console.error('Error inicializando la base de datos:', error.message);
-
-    // Debug similar al auth-service
+  for (let i = 1; i <= maxRetries; i++) {
     try {
-      const files = fs.readdirSync(__dirname);
-      console.log('Archivos en database/:', files);
-    } catch (e) {
-      console.log('No se pudo leer el directorio database/');
+      console.log(`Conectando a PostgreSQL... (intento ${i}/${maxRetries})`);
+      client = await pool.connect();
+
+      const initSqlPath = path.join(__dirname, 'init.sql');
+      if (!fs.existsSync(initSqlPath)) {
+        throw new Error('init.sql no encontrado en: ' + initSqlPath);
+      }
+
+      console.log('Leyendo init.sql...');
+      const sqlScript = fs.readFileSync(initSqlPath, 'utf8');
+
+      console.log('Ejecutando script SQL...');
+      await client.query(sqlScript);
+
+      console.log('Base de datos inicializada correctamente desde init.sql!');
+      break;
+
+    } catch (error) {
+      console.error(`Error en intento ${i}:`, error.message);
+      if (client) { client.release(); client = null; }
+      if (i < maxRetries) {
+        console.log(`Reintentando en ${retryDelay / 1000}s...`);
+        await new Promise(res => setTimeout(res, retryDelay));
+      } else {
+        console.error('No se pudo inicializar la base de datos tras varios intentos.');
+      }
     }
-  } finally {
-    if (client) client.release();
-    await pool.end();
   }
+
+  if (client) client.release();
+  await pool.end();
 }
 
 if (require.main === module) {

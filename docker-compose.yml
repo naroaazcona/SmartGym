@@ -7,7 +7,7 @@ services:
     environment: 
       POSTGRES_DB: auth_db 
       POSTGRES_USER: admin 
-      POSTGRES_PASSWORD: password 
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD} 
     ports:
       - "5433:5432"
     volumes: 
@@ -18,7 +18,7 @@ services:
     environment: 
       POSTGRES_DB: gym_db 
       POSTGRES_USER: admin 
-      POSTGRES_PASSWORD: password 
+      POSTGRES_PASSWORD: ${GYM_DB_PASSWORD} 
     ports:
       - "5434:5432"
     volumes: 
@@ -28,7 +28,9 @@ services:
     image: mongo:5 
     environment: 
       MONGO_INITDB_ROOT_USERNAME: admin 
-      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+    ports:
+      - "27018:27017"
     volumes: 
       - training_data:/data/db 
  
@@ -42,8 +44,9 @@ services:
       DB_HOST: auth-db
       DB_PORT: 5432
       DB_USER: admin
-      DB_PASSWORD: password
+      DB_PASSWORD: ${AUTH_DB_PASSWORD}
       DB_NAME: auth_db
+      JWT_SECRET: ${JWT_SECRET}
  
   gym-service: 
     build: ./gym-service 
@@ -51,13 +54,27 @@ services:
       - "3002:3002" 
     depends_on: 
       - gym-db 
+    environment:
+      DB_HOST: gym-db
+      DB_PORT: 5432
+      DB_USER: admin
+      DB_PASSWORD: ${GYM_DB_PASSWORD}
+      DB_NAME: gym_db
  
   training-service: 
     build: ./training-service 
     ports: 
       - "5000:5000" 
     depends_on: 
-      - training-db 
+      - training-db
+    environment:
+      # Mongo dentro de Docker: host = training-db
+      MONGO_URI: mongodb://admin:${MONGO_ROOT_PASSWORD}@training-db:27017/gym_training?authSource=admin
+      MONGO_DB_NAME: gym_training
+      JWT_SECRET: ${JWT_SECRET}
+      FLASK_DEBUG: "1"
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+
  
   api-gateway: 
     build: ./api-gateway 
@@ -89,7 +106,7 @@ services:
     depends_on:
       - auth-db
       - gym-db
- 
+  
 volumes: 
   auth_data: 
   gym_data: 
