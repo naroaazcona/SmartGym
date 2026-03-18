@@ -82,10 +82,14 @@ class User {
         SELECT 
             u.id, u.email, u.name, u.role, u.created_at,
             p.first_name, p.last_name, p.phone, p.birth_date, p.gender,
-            p.height_cm, p.weight_kg, p.experience_level
+            p.height_cm, p.weight_kg, p.experience_level,
+            s.plan AS subscription_plan, s.status AS subscription_status
         FROM users u
         LEFT JOIN user_profiles p ON p.user_id = u.id
+        LEFT JOIN subscriptions s ON s.user_id = u.id AND s.status = 'active'
         WHERE u.id = $1
+        ORDER BY s.created_at DESC NULLS LAST
+        LIMIT 1
     `;
     const result = await pool.query(query, [id]);
     return result.rows[0];

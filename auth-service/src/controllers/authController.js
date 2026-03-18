@@ -206,7 +206,8 @@ class AuthController {
                     gender: user.gender,
                     heightCm: user.height_cm,
                     weightKg: user.weight_kg,
-                    experienceLevel: user.experience_level
+                    experienceLevel: user.experience_level,
+                    subscriptionPlan: user.subscription_plan || null,
                 } : null
             }
         });

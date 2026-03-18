@@ -20,9 +20,10 @@ export const authService = {
       const me = await authApi.me();
       authStore.setMe(me);
       return me;
-    } catch (err) {
-      authStore.logout();
-      return null;
+    } catch {
+      // Si la API falla temporalmente (500/red), conservamos la sesión local.
+      // En errores reales de auth (401/403), apiFetch ya limpia la sesión.
+      return authStore.token ? authStore.me : null;
     }
   },
 

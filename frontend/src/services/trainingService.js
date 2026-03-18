@@ -8,6 +8,12 @@ export const trainingService = {
       cached: Boolean(res?.cached),
     };
   },
+  
+  async getSavedRecommendation() {
+    const res = await trainingApi.getSavedRecommendation({ _ts: Date.now() });
+    return res?.recommendation || null;
+  },
+
   async saveMyRecommendation(payload = {}) {
     const res = await trainingApi.saveMyRecommendation(payload);
     return {

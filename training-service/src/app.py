@@ -7,6 +7,7 @@ from pymongo import MongoClient
 import jwt
 import openai
 import json
+import random
 
 
 def utcnow():
@@ -108,7 +109,9 @@ REQUISITOS:
 - Adapta la intensidad al nivel del usuario
 - Si tiene limitaciones físicas, evita ejercicios que las agraven
 - El objetivo debe reflejarse claramente en la selección de ejercicios
-- Varía el plan cada vez que se genere
+- Varía el plan cada vez que se genere (semilla de variación: {random.randint(1000, 9999)})
+- Alterna entre distintos enfoques: fuerza, hipertrofia, resistencia, funcional, HIIT, movilidad
+- No repitas los mismos ejercicios de sesiones anteriores, busca variedad real
 
 Responde ÚNICAMENTE con un JSON válido con este formato exacto, sin texto adicional:
 {{
@@ -128,10 +131,11 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto, sin texto adic
 """
 
         response = ai_client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
             response_format={"type": "json_object"},
-            max_tokens=1200
+            max_tokens=2000,
+            temperature=0.9,
         )
 
         return json.loads(response.choices[0].message.content)
@@ -256,6 +260,20 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto, sin texto adic
             "createdAt":      utcnow(),
         }
         return jsonify({"recommendation": doc})
+
+    @app.route("/recommendations/me/saved", methods=["GET"])
+    def get_saved_recommendation():
+        user, err = require_auth()
+        if err:
+            return err
+
+        doc = recs_col.find_one(
+            {"userId": user["id"], "savedByUser": True},
+            sort=[("savedAt", -1)]
+        )
+        if not doc:
+            return jsonify({"recommendation": None}), 200
+        return jsonify({"recommendation": serialize(doc)})
 
     @app.route("/recommendations/me", methods=["POST"])
     def save_recommendation():

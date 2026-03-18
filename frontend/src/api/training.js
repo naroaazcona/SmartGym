@@ -10,6 +10,8 @@ const buildQuery = (params = {}) => {
 export const trainingApi = {
   getMyRecommendation: (params = {}) =>
     apiFetch(`/training/recommendations/me${buildQuery(params)}`),
+  getSavedRecommendation: (params = {}) =>
+    apiFetch(`/training/recommendations/me/saved${buildQuery(params)}`),
   saveMyRecommendation: (payload = {}) =>
     apiFetch("/training/recommendations/me", { method: "POST", body: payload }),
   savePreferences: (preferences = {}) =>

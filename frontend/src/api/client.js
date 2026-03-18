@@ -2,7 +2,7 @@ import { CONFIG } from "../config.js";
 import { authStore } from "../state/authStore.js";
 import { navigate } from "../router.js";
 
-export async function apiFetch(path, { method="GET", headers={}, body } = {}) {
+export async function apiFetch(path, { method = "GET", headers = {}, body } = {}) {
   const url = `${CONFIG.API_BASE}${path}`;
 
   const finalHeaders = { ...headers };
@@ -12,19 +12,34 @@ export async function apiFetch(path, { method="GET", headers={}, body } = {}) {
   const res = await fetch(url, {
     method,
     headers: finalHeaders,
-    body: body
-      ? (body instanceof FormData ? body : JSON.stringify(body))
-      : undefined,
+    body: body ? (body instanceof FormData ? body : JSON.stringify(body)) : undefined,
   });
 
   const text = await res.text();
-  const data = text ? (() => { try { return JSON.parse(text); } catch { return { raw: text }; } })() : null;
+  const data = text
+    ? (() => {
+        try {
+          return JSON.parse(text);
+        } catch {
+          return { raw: text };
+        }
+      })()
+    : null;
 
-  // Si el token ha expirado o es inválido, cerrar sesión y redirigir al login
+  // Solo invalidamos sesion automaticamente cuando el backend indica token invalido.
   if (res.status === 401 || res.status === 403) {
-    authStore.logout();
-    navigate("/login");
-    throw new Error("Tu sesión ha expirado. Por favor inicia sesión de nuevo.");
+    const authMessage = String(data?.message || data?.error || "").toLowerCase();
+    const hasTokenError =
+      authMessage.includes("token") ||
+      authMessage.includes("sesion") ||
+      authMessage.includes("sesión") ||
+      authMessage.includes("expirad");
+
+    if (hasTokenError) {
+      authStore.logout();
+      navigate("/login");
+      throw new Error("Tu sesion ha expirado. Por favor inicia sesion de nuevo.");
+    }
   }
 
   if (!res.ok) {

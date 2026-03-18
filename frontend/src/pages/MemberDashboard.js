@@ -219,6 +219,7 @@ const getDemandMeta = (occupancy = 0) => {
 
 export async function MemberDashboard() {
   const me = await authService.loadSession().catch(() => authStore.me);
+
   if (!authStore.token || !me) {
     navigate("/login");
     return "";
@@ -229,6 +230,7 @@ export async function MemberDashboard() {
   }
 
   const name = me?.profile?.firstName || me?.firstName || me?.name || me?.email || "Socio";
+  const isPremium = me?.subscriptionPlan === "premium";
 
   const heroImages = {
     crossfit: "https://images.unsplash.com/photo-1558611848-73f7eb4001a1?auto=format&fit=crop&w=1400&q=80",
@@ -481,9 +483,9 @@ export async function MemberDashboard() {
       animateCards("#member-classes .member-class-card");
     };
 
-    const renderRecommendations = (state) => {
+   const renderRecommendations = (state) => {
       if (recClassEl) recClassEl.innerHTML = renderRecommendationClasses(state.classes);
-      if (recDietEl) recDietEl.innerHTML = renderRecommendationDiets(state.diets);
+      if (recDietEl && isPremium) recDietEl.innerHTML = renderRecommendationDiets(state.diets);  // ← solo actualiza si es premium
       if (recMetaEl) recMetaEl.textContent = state.meta || "Recomendacion IA";
       if (recNotesEl) recNotesEl.textContent = state.notes ? `Nota IA: ${state.notes}` : "";
       animateCards("#member-rec-classes .member-rec-card");
@@ -583,6 +585,8 @@ export async function MemberDashboard() {
           };
           renderRecommendations(currentRecommendations);
         }
+        localStorage.setItem("smartgym_saved_recommendation_updated_at", new Date().toISOString());
+        window.dispatchEvent(new Event("smartgym:recommendation-saved"));
         setRecStatus(saveRes.message || "Plan guardado correctamente.");
       } catch (err) {
         console.error(err);
@@ -735,9 +739,16 @@ export async function MemberDashboard() {
 
                 <div style="display:flex; flex-direction:column; gap:10px;">
                   <div class="kicker">Dieta sugerida</div>
-                  <div id="member-rec-diets" style="display:grid; gap:10px;">
-                    ${initialRecDietCards}
-                  </div>
+                  ${isPremium
+                    ? `<div id="member-rec-diets" style="display:grid; gap:10px;">${initialRecDietCards}</div>`
+                    : `<div id="member-rec-diets" style="display:grid; gap:10px;">
+                        <div style="padding:18px; border-radius:12px; background:linear-gradient(135deg,rgba(92,123,255,.12),rgba(40,205,180,.10)); border:1.5px dashed rgba(92,123,255,.4); text-align:center; display:flex; flex-direction:column; gap:10px; align-items:center;">
+                          <span style="font-size:28px;">🔒</span>
+                          <div style="font-weight:900; font-size:15px;">Contenido Premium</div>
+                          <p class="sub" style="margin:0;">La nutrición personalizada está disponible para usuarios Premium. <a href="#/suscripcion" style="color:var(--accent); font-weight:700;">Actualizar plan →</a></p>
+                        </div>
+                      </div>`
+                  }
                 </div>
 
                 <p class="sub" id="member-rec-notes" style="margin:0;">${initialRecNotes}</p>
