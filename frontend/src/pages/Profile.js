@@ -280,6 +280,7 @@ export async function ProfilePage() {
 
                 <div class="profile-actions">
                   <button id="profile-save" class="btn btn-primary" type="submit">Guardar cambios</button>
+                  <a class="btn btn-ghost" href="#/suscripcion">Cambiar suscripción</a>
                   <span id="profile-msg" class="profile-success"></span>
                 </div>
 

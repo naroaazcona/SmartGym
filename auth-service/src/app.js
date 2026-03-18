@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const AuthController = require('./controllers/authController');
+const PaymentController = require('./controllers/paymentController');
 const { authenticateToken, authorizeRoles } = require('./middleware/auth');
 const pool = require('./database/db');
 
@@ -8,6 +9,10 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
+
+// El webhook de Stripe necesita el body en raw, antes del express.json()
+app.post('/webhook', express.raw({ type: 'application/json' }), PaymentController.webhook);
+
 app.use(express.json());
 
 //Publicas
@@ -20,6 +25,11 @@ app.post('/logout', authenticateToken, AuthController.logout);
 app.put('/profile', authenticateToken, AuthController.updateProfile);
 app.post('/staff', authenticateToken, authorizeRoles('admin'), AuthController.createStaff);
 
+//Rutas de pago
+app.post('/subscription/checkout', authenticateToken, PaymentController.createCheckoutSession);
+app.get('/subscription/me', authenticateToken, PaymentController.getSubscription);
+
+
 
 // Endpoint de health para verificar el estado del servicio
 app.get('/health', async (req, res) => {
@@ -30,13 +40,13 @@ app.get('/health', async (req, res) => {
     client.release();
     
     res.status(200).json({ 
-      message: 'Auth service is running!',
+      message: 'Auth service esta funcionando!',
       database: 'connected',
       timestamp: new Date().toISOString()
     });
   } catch (error) {
     res.status(500).json({ 
-      message: 'Auth service - Database connection failed',
+      message: 'Auth service - Conexión a la base de datos fallida',
       database: 'disconnected',
       error: error.message 
     });

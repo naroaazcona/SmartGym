@@ -18,12 +18,10 @@ function normalizeEsPhone(value = '') {
     return local ? `+34 ${local}` : '+34';
 }
 
-// Verifica si el email pertenece a un proveedor permitido ('gmail', 'outlook', 'yahoo')
-function isAllowedEmailProvider(email = '') {
-    const domain = String(email).toLowerCase().trim().split('@')[1];
-    if (!domain) return false;
-    const provider = domain.split('.')[0];
-    return ALLOWED_EMAIL_PROVIDERS.includes(provider);
+// Verifica si el email pertenece a un proveedor permitido
+function isValidEmail(email = '') {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regex.test(String(email).toLowerCase().trim());
 }
 
 class AuthController {
@@ -39,9 +37,9 @@ class AuthController {
                 });
             }
 
-            if (!isAllowedEmailProvider(email)) {
+            if (!isValidEmail(email)) {
                 return res.status(400).json({
-                    error: 'Solo se permiten correos de Gmail, Outlook o Yahoo'
+                error: 'El formato del email no es válido'
                 });
             }
 

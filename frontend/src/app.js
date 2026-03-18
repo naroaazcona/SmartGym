@@ -10,6 +10,7 @@ import { AdminDashboard } from "./pages/AdminDashboard.js";
 import { ProfilePage } from "./pages/Profile.js";
 import { MyReservationsPage } from "./pages/MyReservations.js";
 import { NotFoundPage } from "./pages/NotFound.js";
+import { SubscriptionPage } from "./pages/Subscription.js";
 
 registerRoute("/", HomePage);
 registerRoute("/login", LoginPage);
@@ -20,6 +21,7 @@ registerRoute("/mis-reservas", MyReservationsPage);
 registerRoute("/trainer", TrainerDashboard);
 registerRoute("/admin", AdminDashboard);
 registerRoute("/404", NotFoundPage);
+registerRoute("/suscripcion", SubscriptionPage);
 
 await authService.loadSession();
 

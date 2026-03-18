@@ -44,6 +44,7 @@ export const authService = {
 
     const me = res?.user || (token ? await authApi.me() : null);
     if (me) authStore.setMe(me);
+
     return { ...res, user: me || res?.user || null };
   },
 

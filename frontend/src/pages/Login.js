@@ -151,8 +151,8 @@ export async function LoginPage() {
 
       try {
         await authService.register(payload);
-        // Nuevo usuario -> onboarding de preferencias
-        navigate("/onboarding");
+        // Nuevo usuario -> primero pago de suscripcion con Stripe
+        navigate("/suscripcion");
       } catch (ex) {
         if (registerError) registerError.textContent = friendlyError(ex, "Error al registrar. Revisa los datos.");
       } finally {

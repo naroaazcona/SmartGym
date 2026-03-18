@@ -66,5 +66,21 @@ VALUES (
     'trainer'
 ) ON CONFLICT (email) DO NOTHING;
 
+-- Tabla de suscripciones
+CREATE TABLE IF NOT EXISTS subscriptions (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    stripe_customer_id VARCHAR(100),
+    stripe_subscription_id VARCHAR(100),
+    plan VARCHAR(50) NOT NULL,
+    status VARCHAR(50) DEFAULT 'inactive',
+    current_period_end TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe_customer ON subscriptions(stripe_customer_id);
+
 -- Verificar datos insertados
 SELECT 'Base de datos inicializada correctamente' as status;
