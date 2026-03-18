@@ -9,11 +9,13 @@ const PORT = process.env.PORT || 3000;
 const AUTH_URL = process.env.AUTH_URL || "http://127.0.0.1:3001";
 const GYM_URL = process.env.GYM_URL || "http://127.0.0.1:3002";
 const TRAINING_URL = process.env.TRAINING_URL || "http://127.0.0.1:5000";
+const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:8080";
+
 
 // CORS
 app.use(
   cors({
-    origin: "http://localhost:8080",
+    origin: CORS_ORIGIN,
     credentials: true,
   })
 );

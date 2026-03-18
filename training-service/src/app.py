@@ -1,5 +1,6 @@
 import os
 from datetime import datetime, timezone
+import profile
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from pymongo import MongoClient
@@ -17,7 +18,10 @@ def create_app():
     CORS(app)
 
     # ---------- Config ----------
-    app.config["JWT_SECRET"] = os.getenv("JWT_SECRET", "smartgym_secret_key_2024_tfg")
+    jwt_secret = os.getenv("JWT_SECRET")
+    if not jwt_secret:
+        raise RuntimeError("[FATAL] JWT_SECRET no está definido en las variables de entorno.")
+    app.config["JWT_SECRET"] = jwt_secret    
     mongo_uri = os.getenv("MONGO_URI", "mongodb://admin:password@training-db:27017/gym_training?authSource=admin")
     mongo_db_name = os.getenv("MONGO_DB_NAME", "gym_training")
 
@@ -57,6 +61,13 @@ def create_app():
             return None, (jsonify({"error": "Token inválido o expirado"}), 403)
 
     # ---------- Helpers ----------
+    def safe_int(value, default):
+        """Convierte value a entero de forma segura. Si no es válido, devuelve default."""
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
+
     def serialize(doc):
         if not doc:
             return None
@@ -204,7 +215,7 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto, sin texto adic
         profile = {
             "experience_level": request.args.get("level", "beginner"),
             "goal":             request.args.get("goal", "mejorar condición física"),
-            "days_per_week":    int(request.args.get("days", 3)),
+            "days_per_week":    safe_int(request.args.get("days"), 3),            
             "injuries":         request.args.get("injuries", "ninguna"),
             "gender":           request.args.get("gender", ""),
             "weight_kg":        request.args.get("weight", ""),
@@ -222,7 +233,7 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto, sin texto adic
             if preferences.get("goal"):
                 profile["goal"] = preferences["goal"].replace("_", " ")
             if preferences.get("days_per_week"):
-                profile["days_per_week"] = int(preferences["days_per_week"])
+                profile["days_per_week"] = safe_int(preferences["days_per_week"], profile["days_per_week"])
             if preferences.get("injuries"):
                 profile["injuries"] = preferences["injuries"]
 
@@ -346,10 +357,23 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto, sin texto adic
         user, err = require_auth()
         if err:
             return err
-
-        docs = list(logs_col.find({"userId": user["id"]}).sort("createdAt", -1).limit(50))
-        return jsonify({"logs": [serialize(d) for d in docs]})
-
+        page  = safe_int(request.args.get("page"), 1)
+        limit = safe_int(request.args.get("limit"), 20)
+        # Valores seguros: página mínima 1, límite entre 1 y 100
+        page  = max(1, page)
+        limit = max(1, min(limit, 100))
+        skip  = (page - 1) * limit
+        total = logs_col.count_documents({"userId": user["id"]})
+        docs  = list(logs_col.find({"userId": user["id"]}).sort("createdAt", -1).skip(skip).limit(limit))
+        return jsonify({
+            "logs": [serialize(d) for d in docs],
+            "pagination": {
+                "page":       page,
+                "limit":      limit,
+                "total":      total,
+                "totalPages": -(-total // limit),  # división entera hacia arriba
+            }
+    })
 
     @app.route("/preferences/me", methods=["POST"])
     def save_preferences():

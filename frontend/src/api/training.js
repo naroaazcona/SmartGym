@@ -16,4 +16,8 @@ export const trainingApi = {
     apiFetch("/training/preferences/me", { method: "POST", body: { preferences } }),
   getPreferences: () =>
     apiFetch("/training/preferences/me"),
+  getMyLogs: (page = 1, limit = 20) =>
+    apiFetch(`/training/logs/me?page=${page}&limit=${limit}`),
+  createLog: (payload = {}) =>
+    apiFetch("/training/logs", { method: "POST", body: payload }),
 };

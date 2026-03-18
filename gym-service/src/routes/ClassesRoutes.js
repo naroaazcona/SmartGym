@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const ClassesController = require('../controllers/ClassesController');
-const { authenticateToken, authorizeRoles } = require('../middleware/auth');
+const { authenticateToken, authorizeRoles, requireSubscription  } = require('../middleware/auth');
 
 router.get('/', ClassesController.list);
 // Reservas del usuario autenticado (poner antes de :id para no colisionar)
@@ -10,7 +10,7 @@ router.get('/:id', ClassesController.get);
 router.post('/', authenticateToken, authorizeRoles('admin', 'trainer'), ClassesController.create);
 router.get('/:id/reservations', authenticateToken, authorizeRoles('admin', 'trainer'), ClassesController.reservations);
 
-router.post('/:id/reserve', authenticateToken, authorizeRoles('member'), ClassesController.reserve);
+router.post('/:id/reserve', authenticateToken, authorizeRoles('member'), requireSubscription, ClassesController.reserve);
 router.post('/:id/cancel', authenticateToken, authorizeRoles('member'), ClassesController.cancel);
 
 router.put('/:id', authenticateToken, authorizeRoles('admin', 'trainer'), ClassesController.update);

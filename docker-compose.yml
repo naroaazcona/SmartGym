@@ -64,6 +64,8 @@ services:
       DB_USER: admin
       DB_PASSWORD: ${GYM_DB_PASSWORD}
       DB_NAME: gym_db
+      JWT_SECRET: ${JWT_SECRET}        
+      AUTH_URL: http://auth-service:3001
  
   training-service: 
     build: ./training-service 
@@ -103,8 +105,8 @@ services:
     image: dpage/pgadmin4:latest
     container_name: smartgym-pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@smartgym.com
-      PGADMIN_DEFAULT_PASSWORD: admin1234
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
     ports:
       - "5050:80"
     depends_on:

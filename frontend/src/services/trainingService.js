@@ -15,4 +15,20 @@ export const trainingService = {
       recommendation: res?.recommendation || null,
     };
   },
+
+  async getMyLogs(page = 1, limit = 20) {
+    const res = await trainingApi.getMyLogs(page, limit);
+    return {
+      logs:       res?.logs || [],
+      pagination: res?.pagination || null,
+    };
+  },
+
+  async createLog(payload = {}) {
+    const res = await trainingApi.createLog(payload);
+    return {
+      message: res?.message || "",
+      log:     res?.log || null,
+    };
+  },
 };

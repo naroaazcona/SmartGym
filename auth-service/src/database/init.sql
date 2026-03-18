@@ -82,5 +82,15 @@ CREATE TABLE IF NOT EXISTS subscriptions (
 CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe_customer ON subscriptions(stripe_customer_id);
 
+-- Tabla de blacklist de tokens (para logout seguro y real invalidación de JWT)
+CREATE TABLE IF NOT EXISTS token_blacklist (
+    id SERIAL PRIMARY KEY,
+    token VARCHAR(600) NOT NULL,
+    invalidated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_token_blacklist_token ON token_blacklist(token);
+CREATE INDEX IF NOT EXISTS idx_token_blacklist_expires ON token_blacklist(expires_at);
+
 -- Verificar datos insertados
 SELECT 'Base de datos inicializada correctamente' as status;

@@ -1,7 +1,7 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'smartgym_secret_key_2024_tfg';
+const JWT_SECRET = process.env.JWT_SECRET; // Garantizado por el check en auth.js
 const JWT_EXPIRES_IN = '24h';
 const ALLOWED_EMAIL_PROVIDERS = ['gmail', 'outlook', 'yahoo'];
 
@@ -218,9 +218,25 @@ class AuthController {
         }
     }
 
-    // Logout de usuario (simulado)
+    // Logout de usuario: invalida el token añadiéndolo a la blacklist
     static async logout(req, res) {
         try {
+            const authHeader = req.headers['authorization'];
+            const token = authHeader && authHeader.split(' ')[1];
+
+            if (token) {
+                const decoded = jwt.decode(token);
+                const expiresAt = decoded?.exp
+                    ? new Date(decoded.exp * 1000)
+                    : new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+                const pool = require('../database/db');
+                await pool.query(
+                    'INSERT INTO token_blacklist (token, expires_at) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                    [token, expiresAt]
+                );
+            }
+
             res.json({
                 message: 'Logout exitoso',
                 timestamp: new Date().toISOString()
