@@ -61,6 +61,7 @@ export async function LoginPage() {
     const loginError = document.querySelector("#login-error");
     const registerError = document.querySelector("#register-error");
     const loginBtn = document.querySelector("#login-submit");
+    const forgotBtn = document.querySelector("#forgot-password-btn");
     const registerBtn = document.querySelector("#register-submit");
     let loginFailures = 0;
     let cooldownUntil = 0;
@@ -74,6 +75,7 @@ export async function LoginPage() {
       btn.addEventListener("click", () => show(btn.dataset.authTab));
     });
     show("login");
+    forgotBtn?.addEventListener("click", () => navigate("/recuperar-password"));
 
     attachPhoneSanitizer(registerForm?.phone);
 
@@ -103,10 +105,10 @@ export async function LoginPage() {
       setLoading(loginBtn, true, "Entrando...");
 
       try {
-        await authService.login(email, password);
+        const me = await authService.login(email, password);
         loginFailures = 0;
         cooldownUntil = 0;
-        navigate("/");
+        navigate(me?.role === "trainer" ? "/trainer" : "/");
       } catch (ex) {
         loginFailures += 1;
         if (loginFailures >= 3) {
@@ -191,6 +193,10 @@ export async function LoginPage() {
                   <a class="btn btn-ghost" href="#/">Volver</a>
                 </div>
 
+                <div class="mtop">
+                  <button id="forgot-password-btn" class="btn btn-ghost" type="button">Se me ha olvidado la contraseña</button>
+                </div>
+
                 <div id="login-error" class="error"></div>
               </form>
             </div>
@@ -255,10 +261,6 @@ export async function LoginPage() {
 
                 <div id="register-error" class="error"></div>
               </form>
-            </div>
-
-            <div class="footer">
-              Si falla el login/registro, revisa que el backend esté levantado y <code>src/config.js</code> apunte al API Gateway.
             </div>
           </div>
         </section>

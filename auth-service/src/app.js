@@ -18,12 +18,16 @@ app.use(express.json());
 //Publicas
 app.post('/register', AuthController.register);
 app.post('/login', AuthController.login);
+app.post('/password-recovery/start', AuthController.startPasswordRecovery);
+app.post('/password-recovery/verify', AuthController.verifyPasswordRecovery);
+app.post('/password-recovery/reset', AuthController.resetPassword);
 
 //Protegidas
 app.get('/profile', authenticateToken, AuthController.getProfile);
 app.post('/logout', authenticateToken, AuthController.logout); 
 app.put('/profile', authenticateToken, AuthController.updateProfile);
 app.post('/staff', authenticateToken, authorizeRoles('admin'), AuthController.createStaff);
+app.get('/users', authenticateToken, authorizeRoles('admin'), AuthController.listByRole);
 
 //Rutas de pago
 app.post('/subscription/checkout', authenticateToken, PaymentController.createCheckoutSession);

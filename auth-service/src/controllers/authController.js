@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 const JWT_SECRET = process.env.JWT_SECRET; // Garantizado por el check en auth.js
 const JWT_EXPIRES_IN = '24h';
@@ -22,6 +23,14 @@ function normalizeEsPhone(value = '') {
 function isValidEmail(email = '') {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return regex.test(String(email).toLowerCase().trim());
+}
+
+function generateRecoveryCode() {
+    return String(crypto.randomInt(100000, 1000000));
+}
+
+function generateResetToken() {
+    return crypto.randomBytes(32).toString('hex');
 }
 
 class AuthController {
@@ -176,6 +185,136 @@ class AuthController {
             res.status(500).json({ 
                 error: 'Error interno del servidor' 
             });
+        }
+    }
+
+    static async startPasswordRecovery(req, res) {
+        try {
+            const { email, phone } = req.body;
+            if (!email || !phone) {
+                return res.status(400).json({
+                    error: 'Email y telefono son requeridos'
+                });
+            }
+
+            const normalizedEmail = String(email).toLowerCase().trim();
+            const normalizedPhone = normalizeEsPhone(phone);
+            if (!isValidEmail(normalizedEmail) || !normalizedPhone) {
+                return res.status(400).json({
+                    error: 'Datos de recuperacion invalidos'
+                });
+            }
+
+            const user = await User.findByEmailWithPhone(normalizedEmail);
+            const userPhone = normalizeEsPhone(user?.phone);
+            if (!user || !userPhone || userPhone !== normalizedPhone) {
+                return res.status(404).json({
+                    error: 'No existe ninguna cuenta con ese email y telefono'
+                });
+            }
+
+            const verificationCode = generateRecoveryCode();
+            const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+            const request = await User.createPasswordRecoveryRequest(
+                user.id,
+                verificationCode,
+                expiresAt
+            );
+
+            return res.json({
+                message: 'Verificacion completada',
+                requestId: request.id,
+                challengeCode: verificationCode,
+                expiresAt
+            });
+        } catch (error) {
+            console.error('Error iniciando recuperacion de password:', error);
+            return res.status(500).json({ error: 'Error interno del servidor' });
+        }
+    }
+
+    static async verifyPasswordRecovery(req, res) {
+        try {
+            const requestId = Number(req.body?.requestId);
+            const code = String(req.body?.code || '').trim();
+
+            if (!requestId || !code) {
+                return res.status(400).json({
+                    error: 'requestId y codigo son requeridos'
+                });
+            }
+
+            const resetToken = generateResetToken();
+            const resetExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
+            const result = await User.verifyPasswordRecoveryCode(
+                requestId,
+                code,
+                resetToken,
+                resetExpiresAt
+            );
+
+            if (!result.ok) {
+                if (result.reason === 'invalid_code') {
+                    return res.status(400).json({ error: 'Codigo incorrecto' });
+                }
+                if (result.reason === 'expired') {
+                    return res.status(400).json({ error: 'El codigo ha expirado' });
+                }
+                if (result.reason === 'max_attempts') {
+                    return res.status(429).json({ error: 'Has agotado los intentos del codigo' });
+                }
+                return res.status(404).json({ error: 'Solicitud de recuperacion no valida' });
+            }
+
+            return res.json({
+                message: 'Codigo verificado correctamente',
+                requestId,
+                resetToken,
+                resetExpiresAt
+            });
+        } catch (error) {
+            console.error('Error verificando recuperacion de password:', error);
+            return res.status(500).json({ error: 'Error interno del servidor' });
+        }
+    }
+
+    static async resetPassword(req, res) {
+        try {
+            const requestId = Number(req.body?.requestId);
+            const resetToken = String(req.body?.resetToken || '').trim();
+            const newPassword = String(req.body?.newPassword || '');
+
+            if (!requestId || !resetToken || !newPassword) {
+                return res.status(400).json({
+                    error: 'requestId, resetToken y newPassword son requeridos'
+                });
+            }
+
+            if (newPassword.length < 6) {
+                return res.status(400).json({
+                    error: 'La nueva contrasena debe tener al menos 6 caracteres'
+                });
+            }
+
+            const result = await User.resetPasswordWithRecovery(
+                requestId,
+                resetToken,
+                newPassword
+            );
+
+            if (!result.ok) {
+                if (result.reason === 'expired') {
+                    return res.status(400).json({ error: 'La solicitud de recuperacion ha expirado' });
+                }
+                return res.status(400).json({ error: 'Solicitud de cambio de password no valida' });
+            }
+
+            return res.json({
+                message: 'Contrasena actualizada correctamente'
+            });
+        } catch (error) {
+            console.error('Error cambiando password por recuperacion:', error);
+            return res.status(500).json({ error: 'Error interno del servidor' });
         }
     }
 
@@ -372,6 +511,20 @@ class AuthController {
         }
     }
 
+    // Listar usuarios por rol (solo admin)
+    static async listByRole(req, res) {
+        try {
+            const { role } = req.query;
+            if (!role) {
+                return res.status(400).json({ error: 'El parámetro role es requerido' });
+            }
+            const users = await User.findByRole(role);
+            res.json({ users });
+        } catch (error) {
+            console.error('Error listando usuarios por rol:', error);
+            res.status(500).json({ error: 'Error interno del servidor' });
+        }
+    }
 
 }
 

@@ -9,11 +9,17 @@ export async function apiFetch(path, { method = "GET", headers = {}, body } = {}
   if (!(body instanceof FormData)) finalHeaders["Content-Type"] = "application/json";
   if (authStore.token) finalHeaders["Authorization"] = `Bearer ${authStore.token}`;
 
-  const res = await fetch(url, {
-    method,
-    headers: finalHeaders,
-    body: body ? (body instanceof FormData ? body : JSON.stringify(body)) : undefined,
-  });
+  let res;
+  try {
+    res = await fetch(url, {
+      method,
+      headers: finalHeaders,
+      body: body ? (body instanceof FormData ? body : JSON.stringify(body)) : undefined,
+    });
+  } catch (networkErr) {
+    // Error de red (servidor caído, sin conexión, CORS)
+    throw new TypeError("No hay conexión con el servidor. Comprueba que el servicio está activo.");
+  }
 
   const text = await res.text();
   const data = text
@@ -26,7 +32,7 @@ export async function apiFetch(path, { method = "GET", headers = {}, body } = {}
       })()
     : null;
 
-  // Solo invalidamos sesion automaticamente cuando el backend indica token invalido.
+  // Solo invalidamos sesión automáticamente cuando el backend indica token inválido.
   if (res.status === 401 || res.status === 403) {
     const authMessage = String(data?.message || data?.error || "").toLowerCase();
     const hasTokenError =
@@ -38,7 +44,7 @@ export async function apiFetch(path, { method = "GET", headers = {}, body } = {}
     if (hasTokenError) {
       authStore.logout();
       navigate("/login");
-      throw new Error("Tu sesion ha expirado. Por favor inicia sesion de nuevo.");
+      throw new Error("Tu sesión ha expirado. Por favor inicia sesión de nuevo.");
     }
   }
 

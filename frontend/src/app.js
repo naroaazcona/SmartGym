@@ -11,6 +11,11 @@ import { ProfilePage } from "./pages/Profile.js";
 import { MyReservationsPage } from "./pages/MyReservations.js";
 import { NotFoundPage } from "./pages/NotFound.js";
 import { SubscriptionPage } from "./pages/Subscription.js";
+import {
+  PasswordRecoveryStartPage,
+  PasswordRecoveryCodePage,
+  PasswordRecoveryResetPage,
+} from "./pages/PasswordRecovery.js";
 
 registerRoute("/", HomePage);
 registerRoute("/login", LoginPage);
@@ -22,6 +27,9 @@ registerRoute("/trainer", TrainerDashboard);
 registerRoute("/admin", AdminDashboard);
 registerRoute("/404", NotFoundPage);
 registerRoute("/suscripcion", SubscriptionPage);
+registerRoute("/recuperar-password", PasswordRecoveryStartPage);
+registerRoute("/recuperar-codigo", PasswordRecoveryCodePage);
+registerRoute("/cambiar-password", PasswordRecoveryResetPage);
 
 await authService.loadSession();
 

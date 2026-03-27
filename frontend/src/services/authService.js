@@ -38,6 +38,18 @@ export const authService = {
     return me;
   },
 
+  async startPasswordRecovery(email, phone) {
+    return authApi.startPasswordRecovery(email, phone);
+  },
+
+  async verifyPasswordRecovery(requestId, code) {
+    return authApi.verifyPasswordRecovery(requestId, code);
+  },
+
+  async resetPasswordRecovery(requestId, resetToken, newPassword) {
+    return authApi.resetPasswordRecovery(requestId, resetToken, newPassword);
+  },
+
   async register(payload) {
     const res = await authApi.register(payload);
     const token = res?.token || res?.accessToken || null;
@@ -67,6 +79,11 @@ export const authService = {
 
   async createStaff(payload) {
     return authApi.createStaff(payload);
+  },
+
+  async listByRole(role) {
+    const res = await authApi.listByRole(role);
+    return res?.users || [];
   },
 
   async health() {
