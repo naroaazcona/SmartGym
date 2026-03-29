@@ -1,119 +1,140 @@
-version: '3.8' 
- 
-services: 
- 
-  auth-db: 
-    image: postgres:13 
-    environment: 
-      POSTGRES_DB: auth_db 
-      POSTGRES_USER: admin 
-      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD} 
+services:
+  auth-db:
+    image: postgres:13
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:-smartgym_auth_dev_123}
     ports:
       - "5433:5432"
-    volumes: 
-      - auth_data:/var/lib/postgresql/data 
- 
-  gym-db: 
-    image: postgres:13 
-    environment: 
-      POSTGRES_DB: gym_db 
-      POSTGRES_USER: admin 
-      POSTGRES_PASSWORD: ${GYM_DB_PASSWORD} 
+    volumes:
+      - auth_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d auth_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  gym-db:
+    image: postgres:13
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gym_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: ${GYM_DB_PASSWORD:-smartgym_gym_dev_123}
     ports:
       - "5434:5432"
-    volumes: 
-      - gym_data:/var/lib/postgresql/data 
- 
-  training-db: 
-    image: mongo:5 
-    environment: 
-      MONGO_INITDB_ROOT_USERNAME: admin 
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+    volumes:
+      - gym_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d gym_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  training-db:
+    image: mongo:5
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-smartgym_mongo_dev_123}
     ports:
       - "27018:27017"
-    volumes: 
-      - training_data:/data/db 
- 
-  auth-service: 
-    build: ./auth-service 
-    ports: 
-      - "3001:3001" 
-    depends_on: 
-      - auth-db 
+    volumes:
+      - training_data:/data/db
+
+  auth-service:
+    build: ./auth-service
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    depends_on:
+      auth-db:
+        condition: service_healthy
     environment:
       DB_HOST: auth-db
       DB_PORT: 5432
       DB_USER: admin
-      DB_PASSWORD: ${AUTH_DB_PASSWORD}
+      DB_PASSWORD: ${AUTH_DB_PASSWORD:-smartgym_auth_dev_123}
       DB_NAME: auth_db
-      JWT_SECRET: ${JWT_SECRET}
-      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
-      STRIPE_PRICE_BASIC: ${STRIPE_PRICE_BASIC}
-      STRIPE_PRICE_PREMIUM: ${STRIPE_PRICE_PREMIUM}
-      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
- 
-  gym-service: 
-    build: ./gym-service 
-    ports: 
-      - "3002:3002" 
-    depends_on: 
-      - gym-db 
+      JWT_SECRET: ${JWT_SECRET:-smartgym_local_jwt_secret_change_me_2026}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_PRICE_BASIC: ${STRIPE_PRICE_BASIC:-}
+      STRIPE_PRICE_PREMIUM: ${STRIPE_PRICE_PREMIUM:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+
+  gym-service:
+    build: ./gym-service
+    restart: unless-stopped
+    ports:
+      - "3002:3002"
+    depends_on:
+      gym-db:
+        condition: service_healthy
     environment:
       DB_HOST: gym-db
       DB_PORT: 5432
       DB_USER: admin
-      DB_PASSWORD: ${GYM_DB_PASSWORD}
+      DB_PASSWORD: ${GYM_DB_PASSWORD:-smartgym_gym_dev_123}
       DB_NAME: gym_db
-      JWT_SECRET: ${JWT_SECRET}        
+      JWT_SECRET: ${JWT_SECRET:-smartgym_local_jwt_secret_change_me_2026}
       AUTH_URL: http://auth-service:3001
- 
-  training-service: 
-    build: ./training-service 
-    ports: 
-      - "5000:5000" 
-    depends_on: 
+
+  training-service:
+    build: ./training-service
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    depends_on:
       - training-db
     environment:
-      # Mongo dentro de Docker: host = training-db
-      MONGO_URI: mongodb://admin:${MONGO_ROOT_PASSWORD}@training-db:27017/gym_training?authSource=admin
+      MONGO_URI: mongodb://admin:${MONGO_ROOT_PASSWORD:-smartgym_mongo_dev_123}@training-db:27017/gym_training?authSource=admin
       MONGO_DB_NAME: gym_training
-      JWT_SECRET: ${JWT_SECRET}
+      JWT_SECRET: ${JWT_SECRET:-smartgym_local_jwt_secret_change_me_2026}
       FLASK_DEBUG: "1"
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
 
- 
-  api-gateway: 
-    build: ./api-gateway 
-    ports: 
-      - "3000:3000" 
-    depends_on: 
-      - auth-service 
-      - gym-service 
-      - training-service 
+  api-gateway:
+    build: ./api-gateway
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - auth-service
+      - gym-service
+      - training-service
     environment:
       AUTH_URL: http://auth-service:3001
       GYM_URL: http://gym-service:3002
       TRAINING_URL: http://training-service:5000
- 
-  frontend: 
-    build: ./frontend 
-    ports: 
-      - "8080:80" 
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
     command: ["sh", "-c", "printf '\\033[1;36mSmartGym frontend -> http://localhost:8080\\033[0m\\n' && nginx -g 'daemon off;'"]
 
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: smartgym-pgadmin
+    restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@smartgym.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin1234}
     ports:
       - "5050:80"
     depends_on:
-      - auth-db
-      - gym-db
-  
-volumes: 
-  auth_data: 
-  gym_data: 
-  training_data: 
+      auth-db:
+        condition: service_healthy
+      gym-db:
+        condition: service_healthy
+
+volumes:
+  auth_data:
+  gym_data:
+  training_data:
