@@ -43,7 +43,16 @@ export async function MyReservationsPage() {
             </div>
             <span class="pill">${r.capacity ? `${r.booked_count || 0}/${r.capacity}` : ""}</span>
           </li>`).join("")
-      : "<li class='row'><span>No hay reservas en esta sección.</span></li>";
+      : `<li style="list-style:none; padding:0;">
+          <div class="empty-state">
+            <div class="empty-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ff5b2e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+            </div>
+            <p class="empty-title">Sin reservas aquí</p>
+            <p class="empty-sub">Explora las clases disponibles y reserva tu próxima sesión.</p>
+            <a class="btn btn-primary" href="#/member" style="margin-top:8px; font-size:13px;">Ver clases</a>
+          </div>
+        </li>`;
 
   const renderSavedPlan = (doc) => {
     if (!doc) {

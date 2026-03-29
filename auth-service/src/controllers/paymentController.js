@@ -1,15 +1,30 @@
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const stripeFactory = require("stripe");
 const pool = require("../database/db");
+
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "";
+const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "";
 
 const PLAN_CONFIG = {
   basic: process.env.STRIPE_PRICE_BASIC,
   premium: process.env.STRIPE_PRICE_PREMIUM,
 };
 
+let stripeClient = null;
+
+function getStripeClient() {
+  if (!STRIPE_SECRET_KEY) {
+    return null;
+  }
+  if (!stripeClient) {
+    stripeClient = stripeFactory(STRIPE_SECRET_KEY);
+  }
+  return stripeClient;
+}
+
 const isPriceId = (value = "") => String(value).startsWith("price_");
 const isProductId = (value = "") => String(value).startsWith("prod_");
 
-async function resolveStripePriceId(plan) {
+async function resolveStripePriceId(stripe, plan) {
   const configuredValue = PLAN_CONFIG[plan];
 
   if (!configuredValue) {
@@ -64,12 +79,19 @@ class PaymentController {
   static async createCheckoutSession(req, res) {
     try {
       const { plan } = req.body;
+      const stripe = getStripeClient();
+
+      if (!stripe || !PLAN_CONFIG.basic || !PLAN_CONFIG.premium) {
+        return res.status(503).json({
+          error: "Pagos Stripe no configurados en este entorno.",
+        });
+      }
 
       if (!PLAN_CONFIG[plan]) {
         return res.status(400).json({ error: 'Plan no valido. Usa "basic" o "premium".' });
       }
 
-      const priceId = await resolveStripePriceId(plan);
+      const priceId = await resolveStripePriceId(stripe, plan);
 
       // Buscar si el usuario ya tiene un customer_id en Stripe
       const result = await pool.query(
@@ -150,11 +172,18 @@ class PaymentController {
 
   // Webhook de Stripe (confirma el pago y actualiza la base de datos)
   static async webhook(req, res) {
+    const stripe = getStripeClient();
+    if (!stripe || !STRIPE_WEBHOOK_SECRET) {
+      return res.status(503).json({
+        error: "Webhook de Stripe no configurado en este entorno.",
+      });
+    }
+
     const sig = req.headers["stripe-signature"];
     let event;
 
     try {
-      event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+      event = stripe.webhooks.constructEvent(req.body, sig, STRIPE_WEBHOOK_SECRET);
     } catch (err) {
       console.error("Webhook error:", err.message);
       return res.status(400).json({ error: `Webhook error: ${err.message}` });

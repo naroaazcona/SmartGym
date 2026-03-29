@@ -110,7 +110,7 @@ export async function SubscriptionPage() {
               <li>✅ Acceso a todas las clases</li>
               <li>✅ Reservas online</li>
               <li>✅ Plan de entrenamiento IA</li>
-              <li>❌ Clases premium</li>
+              <li>✅ Clases premium</li>
               <li>❌ Nutrición personalizada</li>
             </ul>
             <button 
