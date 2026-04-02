@@ -8,6 +8,7 @@ async function initializeDatabase() {
   let client;
   const maxRetries = 10;
   const retryDelay = 3000;
+  let initialized = false;
 
   for (let i = 1; i <= maxRetries; i++) {
     try {
@@ -26,6 +27,7 @@ async function initializeDatabase() {
       await client.query(sqlScript);
 
       console.log('Base de datos inicializada correctamente desde init.sql!');
+      initialized = true;
       break;
 
     } catch (error) {
@@ -42,10 +44,19 @@ async function initializeDatabase() {
 
   if (client) client.release();
   await pool.end();
+
+  if (!initialized) {
+    throw new Error('No se pudo inicializar la base de datos tras varios intentos.');
+  }
 }
 
 if (require.main === module) {
-  initializeDatabase();
+  initializeDatabase()
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error(error.message);
+      process.exit(1);
+    });
 }
 
 module.exports = initializeDatabase;

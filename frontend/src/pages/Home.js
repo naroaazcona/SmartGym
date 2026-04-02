@@ -4,7 +4,6 @@ import { navigate } from "../router.js";
 import { gymService } from "../services/gymService.js";
 
 export async function HomePage() {
-  const role = authStore.role ?? "visitante";
   const isOnline = Boolean(authStore.token);
 
   /* === Helpers === */
@@ -35,7 +34,7 @@ export async function HomePage() {
       : `${startTxt} - ${endTxt}`;
   };
   const imgForType = (type = "") => {
-    const key = type.toLowerCase();
+    const key = String(type || "").toLowerCase();
     if (key.includes("cross")) return "https://images.unsplash.com/photo-1558611848-73f7eb4001a1?auto=format&fit=crop&w=1400&q=80";
     if (key.includes("hiit")) return "https://images.unsplash.com/photo-1554284126-aa88f22d8b74?auto=format&fit=crop&w=1400&q=80";
     if (key.includes("spin") || key.includes("cycle"))
@@ -71,10 +70,58 @@ export async function HomePage() {
     });
     return Array.isArray(res) ? res.map(normalizeClass).filter((c) => c.startsAt) : [];
   };
+  const fetchUpcomingClasses = async (fromDate, daysAhead = 30) => {
+    const from = new Date(fromDate);
+    from.setHours(0, 0, 0, 0);
+    const to = new Date(from.getTime() + daysAhead * dayMs - 1);
+    const res = await gymService.listClasses({
+      from: from.toISOString(),
+      to: to.toISOString(),
+    });
+    return Array.isArray(res)
+      ? res
+          .map(normalizeClass)
+          .filter((c) => c.startsAt && c.startsAt.getTime() >= Date.now())
+          .sort((a, b) => a.startsAt - b.startsAt)
+      : [];
+  };
+  const buildFallbackClasses = () => {
+    const now = new Date();
+    const templates = [
+      { type: "Crossfit", title: "WOD Express", days: 1, hour: 18, minute: 30, capacity: 16, booked: 10, trainer: "Alex" },
+      { type: "HIIT", title: "Cardio Blast", days: 2, hour: 19, minute: 0, capacity: 18, booked: 12, trainer: "Nora" },
+      { type: "Spinning", title: "Sprint Session", days: 3, hour: 20, minute: 0, capacity: 20, booked: 14, trainer: "Mario" },
+      { type: "Yoga", title: "Flow & Recovery", days: 4, hour: 8, minute: 30, capacity: 14, booked: 8, trainer: "Sara" },
+      { type: "Fuerza", title: "Power Basics", days: 5, hour: 17, minute: 30, capacity: 12, booked: 7, trainer: "Laura" },
+      { type: "Movilidad", title: "Mobility Reset", days: 6, hour: 9, minute: 30, capacity: 15, booked: 9, trainer: "Iker" },
+    ];
+
+    return templates.map((item, idx) => {
+      const startsAt = new Date(now);
+      startsAt.setDate(startsAt.getDate() + item.days);
+      startsAt.setHours(item.hour, item.minute, 0, 0);
+      return normalizeClass({
+        id: `fallback-${idx + 1}`,
+        class_type_name: item.type,
+        title: item.title,
+        capacity: item.capacity,
+        booked_count: item.booked,
+        description: "Horario orientativo visible en la home. Accede para reservar plaza.",
+        location: "SmartGym Center",
+        instructor_name: item.trainer,
+        starts_at: startsAt.toISOString(),
+      });
+    });
+  };
 
   /* === Datos en vivo === */
   let weekStart = startOfWeek(new Date());
-  const initialClasses = await fetchWeekClasses(weekStart).catch(() => []);
+  const weekClasses = await fetchWeekClasses(weekStart).catch(() => []);
+  const upcomingClasses = weekClasses.length
+    ? weekClasses
+    : await fetchUpcomingClasses(new Date(), 30).catch(() => []);
+  const showcaseClasses = upcomingClasses.length ? upcomingClasses : buildFallbackClasses();
+  const hasRealClasses = upcomingClasses.length > 0;
 
   /* === Copys fijos === */
   const facilityShots = [
@@ -110,13 +157,41 @@ export async function HomePage() {
       tip: "4 bloques 40/20 + 10' movilidad.",
       img: "https://images.unsplash.com/photo-1521805103424-d8f8430e8933?auto=format&fit=crop&w=1400&q=80",
     },
+    {
+      title: "Torso potente",
+      focus: "Pecho + espalda",
+      time: "40-50 min",
+      tip: "Superseries de empuje y traccion.",
+      img: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=1400&q=80",
+    },
+    {
+      title: "Pierna y gluteo",
+      focus: "Lower body",
+      time: "50 min",
+      tip: "Sentadilla, bisagra y zancadas pesadas.",
+      img: "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=1400&q=80",
+    },
+    {
+      title: "Core + postura",
+      focus: "Estabilidad",
+      time: "25-30 min",
+      tip: "Plancha, antirotacion y control lumbo-pelvico.",
+      img: "https://images.unsplash.com/photo-1518310383802-640c2de311b2?auto=format&fit=crop&w=1400&q=80",
+    },
+    {
+      title: "Metcon express",
+      focus: "Quema calorica",
+      time: "20-25 min",
+      tip: "Circuito rapido con kettlebell y remo.",
+      img: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1400&q=80",
+    },
   ];
 
   /* === Render helpers === */
-  const classCards = initialClasses.length
-    ? initialClasses
-        .map(
-          (c) => `
+  const classCards = showcaseClasses
+    .slice(0, 8)
+    .map(
+      (c) => `
       <article class="class-card">
         <div class="backdrop" style="background-image:url('${c.image}')"></div>
         <div class="tag red">${c.type}</div>
@@ -125,7 +200,7 @@ export async function HomePage() {
           <span class="badge green">${c.booked}/${c.capacity || "?"} reservas</span>
         </div>
         <div class="dim">${c.dateLabel} · ${c.location} · ${c.capacity} plazas</div>
-        ${c.description ? `<p class="sub" style="margin:0; color:#0b0f19;">${c.description}</p>` : ""}
+        ${c.description ? `<p class="sub" style="margin:0;">${c.description}</p>` : ""}
         <div class="chip-row" style="margin-top:6px;">
           <span class="chip">${c.timeLabel}</span>
           ${c.trainer ? `<span class="chip">Coach ${c.trainer}</span>` : ""}
@@ -135,9 +210,8 @@ export async function HomePage() {
           <button class="btn btn-ghost js-go-area">Ver detalles</button>
         </div>
       </article>`
-        )
-        .join("")
-    : "<p class='sub'>No hay clases programadas esta semana.</p>";
+    )
+    .join("");
 
   const renderWeekCalendar = (startDate, items = []) => {
     const endDate = new Date(startDate.getTime() + 7 * dayMs - 1);
@@ -204,13 +278,14 @@ export async function HomePage() {
   const planCards = quickPlans
     .map(
       (p) => `
-        <div class="card plan-card">
+        <div class="card plan-card js-quick-login" role="button" tabindex="0">
           <div class="plan-thumb" style="background-image:url('${p.img}')"></div>
           <div class="plan-body">
             <div class="kicker">${p.focus}</div>
             <div style="font-weight:1000; font-size:18px;">${p.title}</div>
             <div class="dim">${p.time}</div>
             <p class="sub" style="margin:0;">${p.tip}</p>
+            <div class="dim" style="margin-top:8px; font-weight:700;">Accede para guardar esta idea</div>
           </div>
         </div>
       `
@@ -221,6 +296,15 @@ export async function HomePage() {
   setTimeout(() => {
     document.querySelectorAll(".js-go-login").forEach((btn) => {
       btn.addEventListener("click", () => navigate("/login"));
+    });
+    document.querySelectorAll(".js-quick-login").forEach((card) => {
+      card.addEventListener("click", () => navigate("/login"));
+      card.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          navigate("/login");
+        }
+      });
     });
     document.querySelectorAll(".js-go-area").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -235,7 +319,6 @@ export async function HomePage() {
     const calendarRoot = document.querySelector("#hero-calendar");
     if (!calendarRoot) return;
 
-    const statusEl = () => calendarRoot.querySelector(".cal-status");
     let currentWeek = new Date(weekStart);
     let busy = false;
 
@@ -248,13 +331,28 @@ export async function HomePage() {
       if (busy) return;
       busy = true;
       currentWeek = new Date(currentWeek.getTime() + delta * 7 * dayMs);
-      if (statusEl()) statusEl().textContent = "Cargando clases...";
+
+      // Mostrar skeleton mientras carga
+      calendarRoot.innerHTML = `
+        <div style="padding:16px; display:flex; flex-direction:column; gap:10px;">
+          <div class="skeleton skeleton-line short" style="height:12px; width:120px;"></div>
+          <div class="skeleton skeleton-line med" style="height:18px; width:220px; margin-bottom:8px;"></div>
+          <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:6px;">
+            ${Array.from({length:7}, () => `<div class="skeleton" style="height:80px; border-radius:8px;"></div>`).join("")}
+          </div>
+        </div>`;
+
       try {
         const data = await fetchWeekClasses(currentWeek);
         calendarRoot.innerHTML = renderWeekCalendar(currentWeek, data);
         wireNav();
       } catch (err) {
-        if (statusEl()) statusEl().textContent = err?.message || "No se pudieron cargar las clases.";
+        calendarRoot.innerHTML = `
+          <div class="empty-state">
+            <p class="empty-title">No se pudieron cargar las clases</p>
+            <p class="empty-sub">${err?.message || "Revisa tu conexion e intentalo de nuevo."}</p>
+            <button class="btn btn-ghost" onclick="document.querySelector('#cal-prev') && document.querySelector('#cal-prev').click()">← Volver</button>
+          </div>`;
       } finally {
         busy = false;
       }
@@ -283,7 +381,7 @@ export async function HomePage() {
 
             <div class="hero-visual">
               <div id="hero-calendar">
-                ${renderWeekCalendar(weekStart, initialClasses)}
+                ${renderWeekCalendar(weekStart, weekClasses)}
               </div>
             </div>
           </div>
@@ -292,7 +390,7 @@ export async function HomePage() {
         <section class="container" style="display:flex; flex-direction:column; gap:16px;">
           <div class="panel-card spotlight">
             <h3>Clases creadas</h3>
-            <p class="sub">Elige viendo la sala, aforo y coach antes de reservar.</p>
+            <p class="sub">${hasRealClasses ? "Elige viendo la sala, aforo y coach antes de reservar." : "Vista previa de clases populares. Accede para reservar plaza."}</p>
             <div class="class-gallery" style="margin-top:12px;">
               ${classCards}
             </div>

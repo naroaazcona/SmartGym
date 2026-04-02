@@ -8,6 +8,18 @@ CREATE TABLE IF NOT EXISTS class_types (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Tipos base para que los formularios de creación no queden vacíos
+INSERT INTO class_types (name, description)
+VALUES
+  ('Crossfit', 'Entrenamiento funcional de alta intensidad'),
+  ('HIIT', 'Intervalos de alta intensidad'),
+  ('Spinning', 'Ciclismo indoor con música'),
+  ('Yoga', 'Movilidad, fuerza y control respiratorio'),
+  ('Pilates', 'Control postural y core'),
+  ('Fuerza', 'Trabajo de fuerza general'),
+  ('Movilidad', 'Sesiones para mejorar rango articular')
+ON CONFLICT (name) DO NOTHING;
+
 -- Sesiones concretas (una clase en un día/hora, con aforo)
 CREATE TABLE IF NOT EXISTS classes (
   id SERIAL PRIMARY KEY,
@@ -32,7 +44,7 @@ CREATE TABLE IF NOT EXISTS class_reservations (
   id SERIAL PRIMARY KEY,
   class_id INT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
   user_id INT NOT NULL,
-  status VARCHAR(20) NOT NULL DEFAULT 'booked', -- booked | cancelled
+  status VARCHAR(20) NOT NULL DEFAULT 'booked', -- booked | cancelled | present | late | absent | no_show
   created_at TIMESTAMPTZ DEFAULT NOW(),
   cancelled_at TIMESTAMPTZ,
   UNIQUE (class_id, user_id)

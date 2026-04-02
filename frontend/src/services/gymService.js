@@ -42,6 +42,11 @@ export const gymService = {
     return res?.reservations || res || [];
   },
 
+  async updateReservationStatus(classId, reservationId, status) {
+    const res = await gymApi.updateReservationStatus(classId, reservationId, status);
+    return res?.reservation || res;
+  },
+
   async listMyReservations() {
     const res = await gymApi.listMyReservations();
     return res?.reservations || res || [];

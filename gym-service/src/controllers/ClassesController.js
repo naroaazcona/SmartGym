@@ -84,10 +84,10 @@ class ClassesController {
   static async cancel(req, res) {
     try {
       const classId = Number(req.params.id);
-      const cancelled = await ClassSession.cancel(classId, req.user.id);
+      const result = await ClassSession.cancel(classId, req.user.id);
 
-      if (!cancelled) return res.status(404).json({ error: 'No tienes una reserva hecha para cancelar' });
-      res.json({ message: 'Reserva cancelada', reservation: cancelled });
+      if (!result.ok) return res.status(400).json({ error: result.error });
+      res.json({ message: 'Reserva cancelada', reservation: result.reservation });
     } catch (err) {
       console.error('Error cancelando reserva:', err);
       res.status(500).json({ error: 'Error al cancelar la reserva' });
@@ -98,25 +98,65 @@ class ClassesController {
   static async reservations(req, res) {
     try {
       const classId = Number(req.params.id);
+      const includeCancelled = String(req.query.include_cancelled || '').toLowerCase() === 'true';
 
       const cls = await ClassSession.findById(classId);
       if (!cls) return res.status(404).json({ error: 'Clase no encontrada' });
 
       // solo admin o el trainer asignado
       if (req.user.role === 'admin') {
-        return res.json({ reservations: await ClassSession.listReservations(classId) });
+        return res.json({
+          reservations: await ClassSession.listReservations(classId, { includeCancelled })
+        });
       }
       if (req.user.role === 'trainer') {
         if (cls.trainer_user_id !== req.user.id) {
           return res.status(403).json({ error: 'No tienes permisos' });
         }
-        return res.json({ reservations: await ClassSession.listReservations(classId) });
+        return res.json({
+          reservations: await ClassSession.listReservations(classId, { includeCancelled })
+        });
       }
 
       return res.status(403).json({ error: 'No tienes permisos' });
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: 'Error al obtener reservas' });
+    }
+  }
+
+  // Actualizar estado de asistencia en una reserva (roles: admin, trainer)
+  static async updateReservationStatus(req, res) {
+    try {
+      const classId = Number(req.params.id);
+      const reservationId = Number(req.params.reservationId);
+      const status = String(req.body?.status || '').toLowerCase().trim();
+
+      if (!classId || !reservationId || !status) {
+        return res.status(400).json({ error: 'classId, reservationId y status son obligatorios' });
+      }
+
+      if (!ClassSession.isAttendanceStatus(status)) {
+        return res.status(400).json({ error: 'Estado de asistencia no valido' });
+      }
+
+      const cls = await ClassSession.findById(classId);
+      if (!cls) return res.status(404).json({ error: 'Clase no encontrada' });
+
+      if (req.user.role === 'trainer' && cls.trainer_user_id !== req.user.id) {
+        return res.status(403).json({ error: 'No tienes permisos' });
+      }
+
+      const result = await ClassSession.updateReservationStatus(classId, reservationId, status);
+      if (!result.ok) return res.status(400).json({ error: result.error });
+
+      return res.json({
+        message: 'Estado de asistencia actualizado',
+        reservation: result.reservation
+      });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Error al actualizar asistencia' });
     }
   }
 

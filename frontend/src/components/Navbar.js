@@ -5,6 +5,9 @@ import { navigate } from "../router.js";
 export function Navbar() {
   const role = authStore.role;
   const isOnline = Boolean(authStore.token);
+  const isTrainer = role === "trainer";
+  const trainerName = authStore.me?.profile?.firstName || authStore.me?.name || "";
+  const trainerTabLabel = trainerName ? `Entrenador ${trainerName}` : "Entrenador";
 
   // delegación segura
   setTimeout(() => {
@@ -28,14 +31,14 @@ export function Navbar() {
           </a>
 
           <div class="navlinks">
-            <a class="linkbtn" href="#/">Inicio</a>
+            ${!isTrainer ? `<a class="linkbtn" href="#/">Inicio</a>` : ``}
             ${!isOnline ? `<a class="linkbtn" href="#/login">Acceder</a>` : ``}
             ${role === "member" ? `<a class="linkbtn" href="#/member">Reservas</a>` : ``}
             ${role === "member" ? `<a class="linkbtn" href="#/mis-reservas">Mis reservas</a>` : ``}
-            ${role === "trainer" ? `<a class="linkbtn" href="#/trainer">Entrenador</a>` : ``}
+            ${role === "trainer" ? `<a class="linkbtn" href="#/trainer">${trainerTabLabel}</a>` : ``}
             ${role === "admin" ? `<a class="linkbtn" href="#/admin">Admin</a>` : ``}
             ${isOnline ? `<button class="linkbtn" id="logout-btn">Salir</button>` : ``}
-            ${isOnline ? `<a class="avatar-btn" href="#/perfil" title="Mi perfil" aria-label="Mi perfil">&#128100;</a>` : ``}
+            ${isOnline && !isTrainer ? `<a class="avatar-btn" href="#/perfil" title="Mi perfil" aria-label="Mi perfil">&#128100;</a>` : ``}
           </div>
         </div>
       </div>

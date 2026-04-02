@@ -18,8 +18,15 @@ export async function AdminDashboard() {
   const name = me?.profile?.firstName || me?.name || me?.email || "Admin";
   const isOnline = Boolean(authStore.token);
 
-  const classTypes = await gymService.listClassTypes().catch(() => []);
+  let classTypes = [];
+  let classTypesError = "";
+  try {
+    classTypes = await gymService.listClassTypes();
+  } catch (err) {
+    classTypesError = err?.message || "No se pudieron cargar los tipos de clase.";
+  }
   const classes = await gymService.listClasses().catch(() => []);
+  const trainers = await authService.listByRole('trainer').catch(() => []);
 
   const heroImages = {
     crossfit: "https://images.unsplash.com/photo-1558611848-73f7eb4001a1?auto=format&fit=crop&w=1400&q=80",
@@ -65,6 +72,7 @@ export async function AdminDashboard() {
         </div>
         <div class="cta-inline" style="margin-top:10px;">
           <button class="btn btn-primary" data-action="reservations" data-id="${cls.id}">Reservas</button>
+          <button class="btn btn-ghost" data-action="edit" data-id="${cls.id}">Editar</button>
           <button class="btn btn-ghost" data-action="delete" data-id="${cls.id}">Eliminar</button>
         </div>
       </article>
@@ -73,12 +81,27 @@ export async function AdminDashboard() {
 
   const initialClassList = classes.length
     ? classes.map(renderClassCard).join("")
-    : "<p class='sub'>No hay clases cargadas.</p>";
+    : `<div class="empty-state" style="grid-column:1/-1">
+        <div class="empty-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ff5b2e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="10" y1="16" x2="14" y2="16"/></svg>
+        </div>
+        <p class="empty-title">Sin clases programadas</p>
+        <p class="empty-sub">Crea la primera clase usando el formulario de la derecha.</p>
+      </div>`;
 
-  const typeOptions = [
-    `<option value="" disabled selected hidden>Elige tipo</option>`,
-    ...classTypes.map((t) => `<option value="${t.id}">${t.name}</option>`),
-  ].join("");
+  const buildTypeOptions = (types = []) => {
+    if (!types.length) {
+      return `<option value="" disabled selected>No hay tipos disponibles</option>`;
+    }
+    return [
+      `<option value="" disabled selected hidden>Elige tipo</option>`,
+      ...types.map((t) => `<option value="${t.id}">${t.name}</option>`),
+    ].join("");
+  };
+
+  const typeOptions = buildTypeOptions(classTypes);
+
+  const trainerOptions = trainers.map(t => `<option value="${t.id}">${t.first_name || t.name} (ID: ${t.id})</option>`).join('');
 
   setTimeout(() => {
     const classList = document.querySelector("#admin-classes");
@@ -92,8 +115,49 @@ export async function AdminDashboard() {
 
     const createForm = document.querySelector("#admin-create-class");
     const createMsg = document.querySelector("#admin-create-msg");
+    const classTypeForm = document.querySelector("#admin-create-class-type");
+    const classTypeMsg = document.querySelector("#admin-class-type-msg");
+    const classTypeErrorEl = document.querySelector("#admin-class-type-error");
+    const classTypeCountEl = document.querySelector("#admin-class-type-count");
 
     let currentClasses = classes.slice();
+
+    const buildTypeOptionsHtml = (types = []) => {
+      if (!types.length) {
+        return `<option value="" disabled selected>No hay tipos disponibles</option>`;
+      }
+      return [
+        `<option value="" disabled selected hidden>Elige tipo</option>`,
+        ...types.map((t) => `<option value="${t.id}">${t.name}</option>`),
+      ].join("");
+    };
+
+    const syncClassTypeSelects = (types = []) => {
+      const html = buildTypeOptionsHtml(types);
+      document.querySelectorAll("select[data-class-type-select='true']").forEach((select) => {
+        const currentVal = select.value;
+        select.innerHTML = html;
+        select.disabled = !types.length;
+        if (currentVal && types.some((t) => String(t.id) === String(currentVal))) {
+          select.value = String(currentVal);
+        }
+      });
+      if (classTypeCountEl) classTypeCountEl.textContent = String(types.length);
+    };
+
+    const loadClassTypes = async () => {
+      try {
+        const items = await gymService.listClassTypes();
+        classTypes = items;
+        syncClassTypeSelects(items);
+        if (classTypeErrorEl) classTypeErrorEl.textContent = items.length ? "" : "No hay tipos de clase todavía. Crea uno abajo.";
+      } catch (err) {
+        if (classTypeErrorEl) {
+          classTypeErrorEl.textContent = err?.message || "No se pudieron cargar los tipos de clase.";
+          classTypeErrorEl.style.color = "#fca5a5";
+        }
+      }
+    };
 
     const renderReservations = (items) => {
       if (!resList) return;
@@ -116,7 +180,13 @@ export async function AdminDashboard() {
       if (!classList) return;
       classList.innerHTML = items.length
         ? items.map(renderClassCard).join("")
-        : "<p class='sub'>No hay clases con los filtros aplicados.</p>";
+        : `<div class="empty-state" style="grid-column:1/-1">
+            <div class="empty-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ff5b2e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            </div>
+            <p class="empty-title">Sin resultados</p>
+            <p class="empty-sub">Ninguna clase coincide con el filtro seleccionado.</p>
+          </div>`;
     };
 
     const setStatus = (txt, isError = false) => {
@@ -127,6 +197,16 @@ export async function AdminDashboard() {
 
     const loadClasses = async () => {
       setStatus("Cargando clases...");
+      if (classList) {
+        classList.innerHTML = Array.from({ length: 3 }, () => `
+          <div class="skeleton-card">
+            <div class="skeleton skeleton-thumb"></div>
+            <div class="skeleton skeleton-badge"></div>
+            <div class="skeleton skeleton-line med"></div>
+            <div class="skeleton skeleton-line short"></div>
+            <div class="skeleton skeleton-line full"></div>
+          </div>`).join("");
+      }
       try {
         const params = {};
         if (filterForm?.from?.value) params.from = new Date(filterForm.from.value).toISOString();
@@ -162,6 +242,29 @@ export async function AdminDashboard() {
           renderReservations(reservations);
           if (resStatus) resStatus.textContent = `${reservations.length} reservas encontradas.`;
         }
+
+        if (action === "edit") {
+          const cls = currentClasses.find(c => c.id === id);
+          if (!cls) return;
+          const editCard = document.querySelector("#admin-edit-card");
+          const editForm = document.querySelector("#admin-edit-class");
+          if (!editCard || !editForm) return;
+
+          editForm.classId.value = cls.id;
+          editForm.classTypeId.value = cls.class_type_id;
+          editForm.trainerId.value = cls.trainer_user_id || "";
+          editForm.date.value = cls.starts_at.slice(0, 10);
+          editForm.start.value = cls.starts_at.slice(11, 16);
+          editForm.end.value = cls.ends_at.slice(11, 16);
+          editForm.room.value = cls.location || "";
+          editForm.instructor.value = cls.instructor_name || "";
+          editForm.capacity.value = cls.capacity;
+          editForm.description.value = cls.description || "";
+
+          editCard.style.display = "block";
+          editCard.scrollIntoView({ behavior: "smooth" });
+        }
+
         if (action === "delete") {
           toggle(true, "Eliminando...");
           await gymService.deleteClass(id);
@@ -176,11 +279,99 @@ export async function AdminDashboard() {
       }
     });
 
+    document.querySelector("#admin-edit-cancel")?.addEventListener("click", () => {
+      const editCard = document.querySelector("#admin-edit-card");
+      if (editCard) editCard.style.display = "none";
+    });
+
+    document.querySelector("#admin-edit-class")?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const editForm = e.target;
+      const editMsg = document.querySelector("#admin-edit-msg");
+      const btn = editForm.querySelector("button[type='submit']");
+      const toggle = (isLoading) => {
+        btn.disabled = isLoading;
+        if (!btn.dataset.label) btn.dataset.label = btn.textContent;
+        btn.textContent = isLoading ? "Guardando..." : btn.dataset.label;
+      };
+
+      const id = Number(editForm.classId.value);
+      const date = editForm.date.value;
+      const startTime = editForm.start.value;
+      const endTime = editForm.end.value;
+
+      try {
+        toggle(true);
+        await gymService.updateClass(id, {
+          class_type_id: Number(editForm.classTypeId.value),
+          trainer_user_id: Number(editForm.trainerId.value),
+          starts_at: new Date(`${date}T${startTime}`).toISOString(),
+          ends_at: new Date(`${date}T${endTime}`).toISOString(),
+          capacity: Number(editForm.capacity.value),
+          location: editForm.room.value.trim() || null,
+          instructor_name: editForm.instructor.value.trim() || null,
+          description: editForm.description.value.trim() || null,
+        });
+        if (editMsg) editMsg.textContent = "Clase actualizada correctamente.";
+        await loadClasses();
+      } catch (err) {
+        if (editMsg) editMsg.textContent = err.message || "No se pudo actualizar la clase.";
+      } finally {
+        toggle(false);
+      }
+    });
+
     refreshBtn?.addEventListener("click", () => loadClasses());
 
     filterForm?.addEventListener("submit", (e) => {
       e.preventDefault();
       loadClasses();
+    });
+
+    classTypeForm?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (classTypeMsg) {
+        classTypeMsg.textContent = "";
+        classTypeMsg.style.color = "#2be7c6";
+      }
+
+      const btn = classTypeForm.querySelector("button[type='submit']");
+      const toggle = (isLoading) => {
+        if (!btn) return;
+        btn.disabled = isLoading;
+        if (!btn.dataset.label) btn.dataset.label = btn.textContent;
+        btn.textContent = isLoading ? "Creando..." : btn.dataset.label;
+      };
+
+      const nameInput = classTypeForm.querySelector("input[name='name']");
+      const descriptionInput = classTypeForm.querySelector("textarea[name='description']");
+      const name = nameInput?.value?.trim() || "";
+      const description = descriptionInput?.value?.trim() || "";
+      if (!name) {
+        if (classTypeMsg) {
+          classTypeMsg.textContent = "El nombre del tipo es obligatorio.";
+          classTypeMsg.style.color = "#fca5a5";
+        }
+        return;
+      }
+
+      try {
+        toggle(true);
+        await gymService.createClassType({ name, description: description || null });
+        classTypeForm.reset();
+        await loadClassTypes();
+        if (classTypeMsg) {
+          classTypeMsg.textContent = "Tipo de clase creado correctamente.";
+          classTypeMsg.style.color = "#2be7c6";
+        }
+      } catch (err) {
+        if (classTypeMsg) {
+          classTypeMsg.textContent = err.message || "No se pudo crear el tipo de clase.";
+          classTypeMsg.style.color = "#fca5a5";
+        }
+      } finally {
+        toggle(false);
+      }
     });
 
     createForm?.addEventListener("submit", async (e) => {
@@ -203,6 +394,11 @@ export async function AdminDashboard() {
       const location = createForm.room.value.trim();
       const instructor = createForm.instructor.value.trim();
       const description = createForm.description.value.trim();
+
+      if (!classTypes.length) {
+        if (createMsg) createMsg.textContent = "Primero crea un tipo de clase.";
+        return;
+      }
 
       if (!date || !startTime || !endTime || !classTypeId || !capacity || !trainerId) {
         if (createMsg) createMsg.textContent = "Completa tipo, trainer, fecha, horas y capacidad.";
@@ -231,7 +427,55 @@ export async function AdminDashboard() {
       }
     });
 
+    document.querySelector("#admin-create-staff")?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const staffMsg = document.querySelector("#admin-staff-msg");
+      const btn = form.querySelector("button[type='submit']");
+      const toggle = (isLoading) => {
+        btn.disabled = isLoading;
+        if (!btn.dataset.label) btn.dataset.label = btn.textContent;
+        btn.textContent = isLoading ? "Creando..." : btn.dataset.label;
+      };
+
+      try {
+        toggle(true);
+        await authService.createStaff({
+          firstName: form.firstName.value.trim(),
+          lastName: form.lastName.value.trim(),
+          email: form.email.value.trim(),
+          password: form.password.value,
+          phone: form.phone.value.trim() || undefined,
+          role: "trainer",
+        });
+        form.reset();
+        if (staffMsg) {
+          staffMsg.textContent = "Entrenador creado correctamente.";
+          staffMsg.style.color = "#2be7c6";
+        }
+        const updatedTrainers = await authService.listByRole("trainer").catch(() => []);
+        document.querySelectorAll("select[name='trainerId']").forEach(select => {
+          const currentVal = select.value;
+          select.innerHTML = `<option value="" disabled selected hidden>Elige trainer</option>` +
+            updatedTrainers.map(t => `<option value="${t.id}">${t.first_name || t.name} (ID: ${t.id})</option>`).join("");
+          select.value = currentVal;
+        });
+      } catch (err) {
+        if (staffMsg) {
+          staffMsg.textContent = err.message || "No se pudo crear el entrenador.";
+          staffMsg.style.color = "#fca5a5";
+        }
+      } finally {
+        toggle(false);
+      }
+    });
+
     renderClasses(currentClasses);
+    syncClassTypeSelects(classTypes);
+    if (classTypeErrorEl) {
+      classTypeErrorEl.textContent = classTypesError || (classTypes.length ? "" : "No hay tipos de clase todavía. Crea uno abajo.");
+      if (classTypesError) classTypeErrorEl.style.color = "#fca5a5";
+    }
   }, 0);
 
   return `
@@ -242,99 +486,179 @@ export async function AdminDashboard() {
           <div class="card" style="display:flex; flex-direction:column; gap:18px;">
             <div class="kicker">ADMIN CONSOLE</div>
             <h2 class="h2">${name} · control visual</h2>
-            <p class="sub">Gestiona clases con descripción, aforo y coach desde un panel más visual.</p>
+            <p class="sub">Gestiona clases con descripción, aforo y entrenadores.</p>
 
             <div class="admin-hero">
               <div class="floating-stat"><span class="lbl">Clases</span><span class="val">${classes.length}</span></div>
-              <div class="floating-stat"><span class="lbl">Tipos disponibles</span><span class="val">${classTypes.length}</span></div>
+              <div class="floating-stat"><span class="lbl">Tipos disponibles</span><span class="val" id="admin-class-type-count">${classTypes.length}</span></div>
               <div class="floating-stat"><span class="lbl">Sesión</span><span class="val">${isOnline ? "Activa" : "Inicia sesión"}</span></div>
             </div>
 
             <div class="admin-grid">
-              <div class="card" style="display:flex; flex-direction:column; gap:12px;">
-                <div class="kicker">Clases</div>
-                <form id="admin-class-filter" class="form" style="margin:0; display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; align-items:end; padding:0; background:transparent;">
-                  <div class="form-col">
-                    <label>Desde</label>
-                    <input name="from" type="datetime-local" />
+
+              <!-- COLUMNA IZQUIERDA: filtro arriba + lista de clases abajo -->
+              <div class="card admin-classes-card" style="display:flex; flex-direction:column; gap:12px;">
+                <div class="admin-classes-header">
+                  <!-- Filtrar clases ahora en posición principal (izquierda) -->
+                  <div class="admin-filter-card" style="display:flex; flex-direction:column; gap:8px;">
+                    <div class="kicker">Filtrar clases</div>
+                    <form id="admin-class-filter" class="form admin-filter-form">
+                      <div class="form-col">
+                        <label>Desde</label>
+                        <input name="from" type="datetime-local" />
+                      </div>
+                      <div class="form-col">
+                        <label>Hasta</label>
+                        <input name="to" type="datetime-local" />
+                      </div>
+                      <div class="admin-filter-actions">
+                        <button class="btn btn-primary" type="submit">Filtrar</button>
+                        <button class="btn btn-ghost" type="button" id="admin-class-refresh">Actualizar</button>
+                      </div>
+                    </form>
+                    <div class="dim" id="admin-class-status">Conectado al servicio.</div>
                   </div>
-                  <div class="form-col">
-                    <label>Hasta</label>
-                    <input name="to" type="datetime-local" />
-                  </div>
-                  <button class="btn btn-primary" type="submit">Filtrar</button>
-                  <button class="btn btn-ghost" type="button" id="admin-class-refresh">Actualizar</button>
-                </form>
-                <div class="dim" id="admin-class-status">Conectado al servicio.</div>
+                  <!-- Kicker "Clases" ahora en posición secundaria (derecha) -->
+                  <div class="kicker" style="align-self:flex-start; padding-top:4px;">Clases</div>
+                </div>
                 <div class="class-gallery" id="admin-classes" style="margin-top:8px;">
                   ${initialClassList}
                 </div>
               </div>
 
-              <div class="card" style="display:grid; gap:12px; grid-template-columns:1fr;">
-                <div class="class-visual">
-                  <div class="overlay">
-                    <div class="kicker">Nueva clase</div>
-                    <div style="font-weight:1000; font-size:24px;">Foto + descripción</div>
-                    <div class="chip-row">
-                      <span class="chip">Coach visible</span>
-                      <span class="chip">Aforo controlado</span>
+              <!-- COLUMNA DERECHA: crear clase + crear entrenador (más ancha ahora) -->
+              <div class="admin-side-stack">
+                <div class="card" style="display:flex; flex-direction:column; gap:12px;">
+                  <div class="kicker">Crear clase</div>
+                  <form id="admin-create-class" class="form" style="margin:0; display:flex; flex-direction:column; gap:10px; background:transparent; padding:0; flex:1;">
+                    <label>Tipo de clase</label>
+                    <select name="classTypeId" data-class-type-select="true" required ${classTypes.length ? "" : "disabled"}>${typeOptions}</select>
+                    <div class="dim" id="admin-class-type-error" style="color:#fca5a5;">${classTypesError || ""}</div>
+                    <label>Trainer</label>
+                    <select name="trainerId" required>
+                      <option value="" disabled selected hidden>Elige trainer</option>
+                      ${trainerOptions}
+                    </select>
+                    <div class="admin-form-grid">
+                      <div class="form-col">
+                        <label>Fecha</label>
+                        <input name="date" type="date" required />
+                      </div>
+                      <div class="form-col">
+                        <label>Inicio</label>
+                        <input name="start" type="time" required />
+                      </div>
+                      <div class="form-col">
+                        <label>Fin</label>
+                        <input name="end" type="time" required />
+                      </div>
                     </div>
-                  </div>
+                    <label>Ubicación</label>
+                    <input name="room" type="text" placeholder="Sala 1" />
+                    <label>Coach visible</label>
+                    <input name="instructor" type="text" placeholder="Nombre coach" />
+                    <label>Capacidad</label>
+                    <input name="capacity" type="number" min="1" placeholder="20" required />
+                    <label>Descripción de la clase</label>
+                    <textarea name="description" placeholder="Qué se hará, nivel, material, sensaciones..."></textarea>
+                    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                      <button class="btn btn-primary" type="submit">Crear clase</button>
+                      <span id="admin-create-msg" style="color:#2be7c6; font-weight:700;"></span>
+                    </div>
+                  </form>
                 </div>
-                <form id="admin-create-class" class="form" style="margin:0; display:flex; flex-direction:column; gap:10px; background:transparent; padding:0;">
-                  <label>Tipo de clase</label>
-                  <select name="classTypeId" required>${typeOptions}</select>
 
-                  <div class="admin-form-grid">
-                    <div class="form-col">
-                      <label>Trainer ID</label>
-                      <input name="trainerId" type="number" min="1" placeholder="ej. 5" required />
+                <div class="card" style="display:flex; flex-direction:column; gap:10px;">
+                  <div class="kicker">Crear tipo de clase</div>
+                  <form id="admin-create-class-type" class="form" style="margin:0; display:flex; flex-direction:column; gap:10px; background:transparent; padding:0;">
+                    <label>Nombre</label>
+                    <input name="name" type="text" placeholder="Ej. Body Pump" required />
+                    <label>Descripción</label>
+                    <textarea name="description" placeholder="Descripción breve del tipo de clase"></textarea>
+                    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                      <button class="btn btn-primary" type="submit">Crear tipo</button>
+                      <span id="admin-class-type-msg" style="font-weight:700;"></span>
                     </div>
-                    <div class="form-col">
-                      <label>Capacidad</label>
-                      <input name="capacity" type="number" min="1" placeholder="20" required />
+                  </form>
+                </div>
+
+                <div class="card" style="display:flex; flex-direction:column; gap:10px;">
+                  <div class="kicker">Crear entrenador</div>
+                  <form id="admin-create-staff" class="form" style="margin:0; display:flex; flex-direction:column; gap:10px; background:transparent; padding:0;">
+                    <div class="admin-form-grid">
+                      <div class="form-col">
+                        <label>Nombre</label>
+                        <input name="firstName" type="text" placeholder="Juan" required />
+                      </div>
+                      <div class="form-col">
+                        <label>Apellido</label>
+                        <input name="lastName" type="text" placeholder="García" required />
+                      </div>
                     </div>
-                  </div>
-
-                  <div class="admin-form-grid">
-                    <div class="form-col">
-                      <label>Fecha</label>
-                      <input name="date" type="date" required />
+                    <label>Email</label>
+                    <input name="email" type="email" placeholder="juan@smartgym.com" required />
+                    <label>Contraseña</label>
+                    <input name="password" type="password" placeholder="Mínimo 6 caracteres" required />
+                    <label>Teléfono</label>
+                    <input name="phone" type="text" placeholder="600000000" />
+                    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                      <button class="btn btn-primary" type="submit">Crear entrenador</button>
+                      <span id="admin-staff-msg" style="font-weight:700;"></span>
                     </div>
-                    <div class="form-col">
-                      <label>Inicio</label>
-                      <input name="start" type="time" required />
-                    </div>
-                    <div class="form-col">
-                      <label>Fin</label>
-                      <input name="end" type="time" required />
-                    </div>
-                  </div>
-
-                  <label>Ubicación</label>
-                  <input name="room" type="text" placeholder="Sala 1" />
-
-                  <label>Coach visible</label>
-                  <input name="instructor" type="text" placeholder="Nombre coach" />
-
-                  <label>Descripción de la clase</label>
-                  <textarea name="description" placeholder="Qué se hará, nivel, material, sensaciones..." ></textarea>
-
-                  <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-                    <button class="btn btn-primary" type="submit">Crear clase</button>
-                    <span id="admin-create-msg" style="color:#2be7c6; font-weight:700;"></span>
-                  </div>
-                  <div class="dim">Nota: introduce el ID del entrenador (lo encuentras en auth-service).</div>
-                </form>
+                  </form>
+                </div>
               </div>
-            </div>
 
-            <div class="card" style="grid-column: span 2;">
+            </div>
+            <!-- RESERVAS -->
+            <div class="card">
               <div class="kicker" id="admin-res-title">Reservas</div>
               <div class="dim" id="admin-res-status">Pulsa en "Reservas" de una clase para ver los asistentes.</div>
               <ul class="list" id="admin-reservations" style="margin-top:10px;"></ul>
             </div>
+
+            <!-- EDITAR CLASE -->
+            <div class="card" style="display:none;" id="admin-edit-card">
+              <div class="kicker">Editar clase</div>
+              <form id="admin-edit-class" class="form" style="margin:0; display:flex; flex-direction:column; gap:10px; background:transparent; padding:0;">
+                <input type="hidden" name="classId" />
+                <label>Tipo de clase</label>
+                <select name="classTypeId" data-class-type-select="true" required ${classTypes.length ? "" : "disabled"}>${typeOptions}</select>
+                <label>Trainer</label>
+                <select name="trainerId" required>
+                  <option value="" disabled selected hidden>Elige trainer</option>
+                  ${trainerOptions}
+                </select>
+                <div class="admin-form-grid">
+                  <div class="form-col">
+                    <label>Fecha</label>
+                    <input name="date" type="date" required />
+                  </div>
+                  <div class="form-col">
+                    <label>Inicio</label>
+                    <input name="start" type="time" required />
+                  </div>
+                  <div class="form-col">
+                    <label>Fin</label>
+                    <input name="end" type="time" required />
+                  </div>
+                </div>
+                <label>Ubicación</label>
+                <input name="room" type="text" placeholder="Sala 1" />
+                <label>Coach visible</label>
+                <input name="instructor" type="text" placeholder="Nombre coach" />
+                <label>Capacidad</label>
+                <input name="capacity" type="number" min="1" required />
+                <label>Descripción</label>
+                <textarea name="description" placeholder="Descripción de la clase..."></textarea>
+                <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                  <button class="btn btn-primary" type="submit">Guardar cambios</button>
+                  <button class="btn btn-ghost" type="button" id="admin-edit-cancel">Cancelar</button>
+                  <span id="admin-edit-msg" style="color:#2be7c6; font-weight:700;"></span>
+                </div>
+              </form>
+            </div>
+
           </div>
         </section>
       </main>

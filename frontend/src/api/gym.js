@@ -31,6 +31,12 @@ export const gymApi = {
   listReservations: (id) =>
     apiFetch(`/gym/classes/${id}/reservations`),
 
+  updateReservationStatus: (classId, reservationId, status) =>
+    apiFetch(`/gym/classes/${classId}/reservations/${reservationId}/status`, {
+      method: "PATCH",
+      body: { status },
+    }),
+
   listMyReservations: () =>
     apiFetch("/gym/classes/me/reservations"),
 

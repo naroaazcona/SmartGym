@@ -16,6 +16,8 @@ export async function TrainerDashboard() {
   }
 
   const name = me?.profile?.firstName || me?.name || me?.email || "Entrenador";
+  const trainerTitle =
+    name === "Entrenador" ? "Entrenador - turno de hoy" : `Entrenador ${name} - turno de hoy`;
 
   const heroImages = {
     crossfit: "https://images.unsplash.com/photo-1558611848-73f7eb4001a1?auto=format&fit=crop&w=1400&q=80",
@@ -31,7 +33,13 @@ export async function TrainerDashboard() {
   const start = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
   const end = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
 
-  const classTypes = await gymService.listClassTypes().catch(() => []);
+  let classTypes = [];
+  let classTypesError = "";
+  try {
+    classTypes = await gymService.listClassTypes();
+  } catch (err) {
+    classTypesError = err?.message || "No se pudieron cargar los tipos de clase.";
+  }
   const classes = await gymService
     .listClasses({ from: start.toISOString(), to: end.toISOString() })
     .catch(() => []);
@@ -72,14 +80,22 @@ export async function TrainerDashboard() {
     `;
   };
 
-  const typeOptions = [
-    `<option value="" disabled selected hidden>Elige tipo</option>`,
-    ...classTypes.map((t) => `<option value="${t.id}">${t.name}</option>`),
-  ].join("");
+  const typeOptions = classTypes.length
+    ? [
+        `<option value="" disabled selected hidden>Elige tipo</option>`,
+        ...classTypes.map((t) => `<option value="${t.id}">${t.name}</option>`),
+      ].join("")
+    : `<option value="" disabled selected>No hay tipos disponibles</option>`;
 
   const initialList = myClasses.length
     ? myClasses.map(renderCard).join("")
-    : "<p class='sub'>No tienes clases asignadas hoy.</p>";
+    : `<div class="empty-state">
+        <div class="empty-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ff5b2e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <p class="empty-title">Sin clases hoy</p>
+        <p class="empty-sub">No tienes clases asignadas para hoy. Consulta con el administrador.</p>
+      </div>`;
 
   setTimeout(() => {
     const listEl = document.querySelector("#trainer-classes");
@@ -91,6 +107,23 @@ export async function TrainerDashboard() {
     const createMsg = document.querySelector("#trainer-create-msg");
     const refreshBtn = document.querySelector("#trainer-refresh");
     let current = myClasses.slice();
+    let selectedClassId = null;
+
+    const statusLabel = {
+      booked: "Pendiente",
+      present: "Presente",
+      late: "Tarde",
+      absent: "Ausente",
+      no_show: "No-show",
+      cancelled: "Cancelada",
+    };
+
+    const attendanceStatuses = [
+      { value: "present", label: "Presente" },
+      { value: "late", label: "Tarde" },
+      { value: "absent", label: "Ausente" },
+      { value: "no_show", label: "No-show" },
+    ];
 
     const renderReservations = (items) => {
       if (!resEl) return;
@@ -109,11 +142,65 @@ export async function TrainerDashboard() {
         .join("");
     };
 
-      const renderList = (items) => {
+    const renderAttendanceReservations = (items) => {
+      if (!resEl) return;
+      if (!items.length) {
+        resEl.innerHTML = "<p class='sub'>Sin reservas activas.</p>";
+        return;
+      }
+
+      const ordered = items
+        .slice()
+        .sort((a, b) => {
+          const order = { booked: 0, present: 1, late: 2, absent: 3, no_show: 4, cancelled: 5 };
+          return (order[a.status] ?? 99) - (order[b.status] ?? 99);
+        });
+
+      resEl.innerHTML = ordered
+        .map(
+          (r) => `
+          <li class="row" style="display:flex; flex-direction:column; gap:8px; align-items:stretch;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+              <span>#${r.id} · Usuario ${r.user_id}</span>
+              <span class="pill">${statusLabel[r.status] || r.status}</span>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:6px;">
+              ${attendanceStatuses
+                .map(
+                  (item) =>
+                    `<button class="btn btn-ghost" type="button" data-action="mark-attendance" data-class-id="${selectedClassId}" data-reservation-id="${r.id}" data-status="${item.value}" ${
+                      r.status === item.value ? "disabled" : ""
+                    }>${item.label}</button>`
+                )
+                .join("")}
+            </div>
+          </li>`
+        )
+        .join("");
+    };
+
+    const loadReservations = async (classId) => {
+      selectedClassId = classId;
+      const reservations = await gymService.listReservations(classId);
+      if (resTitle) resTitle.textContent = `Reservas de la clase ${classId}`;
+      renderAttendanceReservations(reservations);
+      if (resStatus) {
+        const pending = reservations.filter((item) => item.status === "booked").length;
+        resStatus.textContent = `${reservations.length} reservas activas · ${pending} pendientes de pase de lista`;
+      }
+    };
+
+    const renderList = (items) => {
         if (!listEl) return;
         listEl.innerHTML = items.length
           ? items.map(renderCard).join("")
-          : "<p class='sub'>No tienes clases asignadas.</p>";
+          : `<div class="empty-state">
+              <div class="empty-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ff5b2e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              </div>
+              <p class="empty-title">Sin clases asignadas</p>
+              <p class="empty-sub">No tienes clases en este período.</p>
+            </div>`;
       };
 
     const setStatus = (txt, isError = false) => {
@@ -156,20 +243,44 @@ export async function TrainerDashboard() {
       try {
         if (action === "reservations") {
           toggle(true, "Cargando...");
-          const reservations = await gymService.listReservations(id);
-          if (resTitle) resTitle.textContent = `Reservas de la clase ${id}`;
-          renderReservations(reservations);
-          if (resStatus) resStatus.textContent = `${reservations.length} reservas encontradas`;
+          await loadReservations(id);
         }
         if (action === "delete") {
           toggle(true, "Eliminando...");
           await gymService.deleteClass(id);
           if (resTitle) resTitle.textContent = "Reservas de clase";
-          renderReservations([]);
+          selectedClassId = selectedClassId === id ? null : selectedClassId;
+          renderAttendanceReservations([]);
+          if (resStatus) resStatus.textContent = "Selecciona una clase para ver asistentes.";
           await loadClasses();
         }
       } catch (err) {
         if (resStatus) resStatus.textContent = err.message || "Error al procesar.";
+      } finally {
+        toggle(false);
+      }
+    });
+
+    resEl?.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-action='mark-attendance']");
+      if (!btn) return;
+      const classId = Number(btn.dataset.classId || selectedClassId);
+      const reservationId = Number(btn.dataset.reservationId);
+      const status = String(btn.dataset.status || "").trim().toLowerCase();
+      if (!classId || !reservationId || !status) return;
+
+      const toggle = (isLoading, label) => {
+        btn.disabled = isLoading;
+        if (!btn.dataset.label) btn.dataset.label = btn.textContent;
+        btn.textContent = isLoading ? label : btn.dataset.label;
+      };
+
+      try {
+        toggle(true, "Guardando...");
+        await gymService.updateReservationStatus(classId, reservationId, status);
+        await loadReservations(classId);
+      } catch (err) {
+        if (resStatus) resStatus.textContent = err.message || "No se pudo actualizar asistencia.";
       } finally {
         toggle(false);
       }
@@ -192,8 +303,13 @@ export async function TrainerDashboard() {
       const classTypeId = form.classTypeId.value;
       const capacity = form.capacity.value ? Number(form.capacity.value) : null;
       const location = form.room.value.trim();
-      const instructor = form.instructor.value.trim() || name;
+      const instructor = name;
       const description = form.description.value.trim();
+
+      if (!classTypes.length) {
+        if (createMsg) createMsg.textContent = "No hay tipos de clase disponibles. Contacta con un administrador.";
+        return;
+      }
 
       if (!date || !startTime || !endTime || !classTypeId || !capacity) {
         if (createMsg) createMsg.textContent = "Completa tipo, fecha, horas y capacidad.";
@@ -235,14 +351,14 @@ export async function TrainerDashboard() {
         <section class="hero">
           <div class="card">
             <div class="kicker">PANEL ENTRENADOR</div>
-            <h2 class="h2">${name} · turno de hoy</h2>
+            <h2 class="h2">${trainerTitle}</h2>
             <p class="sub">Gestiona tus clases, revisa reservas y crea sesiones nuevas.</p>
 
-            <div class="grid">
-              <div class="card" style="grid-column: span 7;">
+            <div class="trainer-layout">
+              <div class="card trainer-panel trainer-classes-panel">
                 <div class="kicker">Clases del día</div>
                 <div class="dim" id="trainer-status">Conectado al servicio.</div>
-                <div class="class-gallery" id="trainer-classes" style="margin-top:8px;">
+                <div class="class-gallery trainer-class-gallery" id="trainer-classes" style="margin-top:8px;">
                   ${initialList}
                 </div>
                 <div class="mtop" style="display:flex; gap:10px; flex-wrap:wrap;">
@@ -250,11 +366,14 @@ export async function TrainerDashboard() {
                 </div>
               </div>
 
-              <div class="card" style="grid-column: span 5;">
+              <div class="card trainer-panel trainer-form-panel">
                 <div class="kicker">Crear nueva clase</div>
                 <form id="trainer-create-class" class="form" style="margin-top:8px; display:flex; flex-direction:column; gap:10px;">
                   <label>Tipo de clase</label>
-                  <select name="classTypeId" required>${typeOptions}</select>
+                  <select name="classTypeId" required ${classTypes.length ? "" : "disabled"}>${typeOptions}</select>
+                  <div class="dim" style="color:#b42318;">
+                    ${classTypesError || (classTypes.length ? "" : "No hay tipos de clase disponibles. Pide al admin que cree uno.")}
+                  </div>
 
                   <div class="form-row">
                     <div class="form-col">
@@ -283,7 +402,7 @@ export async function TrainerDashboard() {
                   </div>
 
                   <label>Coach visible</label>
-                  <input name="instructor" type="text" placeholder="${name}" />
+                  <input name="instructor" type="text" value="${name}" readonly />
 
                   <label>Descripción de la clase</label>
                   <textarea name="description" placeholder="Objetivo, material, sensaciones previstas"></textarea>
@@ -295,7 +414,7 @@ export async function TrainerDashboard() {
                 </form>
               </div>
 
-              <div class="card" style="grid-column: span 12;">
+              <div class="card trainer-panel trainer-reservations-panel">
                 <div class="kicker" id="trainer-res-title">Reservas de clase</div>
                 <div class="dim" id="trainer-res-status">Selecciona una clase para ver asistentes.</div>
                 <ul class="list" id="trainer-reservations" style="margin-top:10px;"></ul>
