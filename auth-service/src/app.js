@@ -28,6 +28,7 @@ app.post('/logout', authenticateToken, AuthController.logout);
 app.put('/profile', authenticateToken, AuthController.updateProfile);
 app.post('/staff', authenticateToken, authorizeRoles('admin'), AuthController.createStaff);
 app.get('/users', authenticateToken, authorizeRoles('admin'), AuthController.listByRole);
+app.get('/users/basic', authenticateToken, authorizeRoles('admin', 'trainer'), AuthController.listBasicUsers);
 
 //Rutas de pago
 app.post('/subscription/checkout', authenticateToken, PaymentController.createCheckoutSession);
@@ -56,6 +57,35 @@ app.get('/health', async (req, res) => {
     });
   }
 });
+
+// Limpieza periódica de registros expirados en BD
+// Se ejecuta al arrancar y luego cada hora para evitar que las tablas crezcan indefinidamente
+async function cleanupExpiredRecords() {
+  try {
+    const now = new Date().toISOString();
+
+    const blacklist = await pool.query(
+      'DELETE FROM token_blacklist WHERE expires_at < $1', [now]
+    );
+    const sessions = await pool.query(
+      'DELETE FROM sessions WHERE expires_at < $1', [now]
+    );
+    const recovery = await pool.query(
+      'DELETE FROM password_recovery_requests WHERE code_expires_at < $1 AND verified_at IS NULL', [now]
+    );
+
+    const total = blacklist.rowCount + sessions.rowCount + recovery.rowCount;
+    if (total > 0) {
+      console.log(`🧹 Limpieza BD: ${blacklist.rowCount} tokens blacklist, ${sessions.rowCount} sesiones, ${recovery.rowCount} recuperaciones expiradas eliminadas.`);
+    }
+  } catch (err) {
+    console.error('⚠️  Error en limpieza de registros expirados:', err.message);
+  }
+}
+
+const CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 hora
+cleanupExpiredRecords();
+setInterval(cleanupExpiredRecords, CLEANUP_INTERVAL_MS);
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`✅ Auth service - Conectado en http://0.0.0.0:${PORT}`);

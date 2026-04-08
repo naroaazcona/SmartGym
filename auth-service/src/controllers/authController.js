@@ -526,6 +526,28 @@ class AuthController {
         }
     }
 
+    // Listar datos basicos de usuarios por ids (admin y trainer)
+    static async listBasicUsers(req, res) {
+        try {
+            const rawIds = String(req.query?.ids || '');
+            const ids = [...new Set(
+                rawIds
+                    .split(',')
+                    .map((value) => Number(String(value).trim()))
+                    .filter((value) => Number.isInteger(value) && value > 0)
+            )];
+
+            if (!ids.length) {
+                return res.status(400).json({ error: 'El parametro ids es requerido (csv de enteros)' });
+            }
+
+            const users = await User.findBasicByIds(ids);
+            return res.json({ users });
+        } catch (error) {
+            console.error('Error listando usuarios por ids:', error);
+            return res.status(500).json({ error: 'Error interno del servidor' });
+        }
+    }
 }
 
 module.exports = AuthController;

@@ -176,6 +176,32 @@ static async findByRole(role) {
     return result.rows;
 }
 
+static async findBasicByIds(ids = []) {
+    const normalizedIds = [...new Set(
+        (Array.isArray(ids) ? ids : [])
+            .map((id) => Number(id))
+            .filter((id) => Number.isInteger(id) && id > 0)
+    )];
+
+    if (!normalizedIds.length) return [];
+
+    const query = `
+        SELECT
+            u.id,
+            u.name,
+            u.role,
+            p.first_name,
+            p.last_name
+        FROM users u
+        LEFT JOIN user_profiles p ON p.user_id = u.id
+        WHERE u.id = ANY($1::int[])
+        ORDER BY u.id ASC
+    `;
+
+    const result = await pool.query(query, [normalizedIds]);
+    return result.rows;
+}
+
 static async createPasswordRecoveryRequest(userId, verificationCode, codeExpiresAt) {
     const codeHash = await bcrypt.hash(String(verificationCode), 10);
     const client = await pool.connect();
