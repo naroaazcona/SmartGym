@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SmartGym Test Report</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --surface: #ffffff;
+      --txt: #1b2430;
+      --muted: #5a6472;
+      --ok: #1f9d55;
+      --ok-soft: #e8f7ee;
+      --fail: #d64545;
+      --fail-soft: #fdecec;
+      --na: #9aa3af;
+      --na-soft: #f1f3f5;
+      --border: #dbe1e8;
+      --brand: #1e3a5f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Segoe UI, Arial, sans-serif;
+      color: var(--txt);
+      background: radial-gradient(circle at 0% 0%, #ffffff 0%, var(--bg) 45%);
+    }
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 16px 40px;
+    }
+    .top {
+      background: var(--brand);
+      color: #fff;
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 16px;
+    }
+    .top h1 {
+      margin: 0 0 6px;
+      font-size: 24px;
+    }
+    .top p {
+      margin: 0;
+      opacity: .9;
+      font-size: 14px;
+    }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+      margin: 14px 0 6px;
+    }
+    .box {
+      background: rgba(255,255,255,.14);
+      border: 1px solid rgba(255,255,255,.28);
+      border-radius: 10px;
+      padding: 10px;
+    }
+    .box .v {
+      font-size: 24px;
+      font-weight: 700;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 12px;
+    }
+    .card {
+      background: var(--surface);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 12px;
+    }
+    .card.ok { border-color: #b9e5c9; background: linear-gradient(180deg, #fff, var(--ok-soft)); }
+    .card.fail { border-color: #f4b3b3; background: linear-gradient(180deg, #fff, var(--fail-soft)); }
+    .card.na { border-color: #e2e7ec; background: linear-gradient(180deg, #fff, var(--na-soft)); }
+    .card header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .card h2 {
+      margin: 0;
+      font-size: 18px;
+    }
+    .badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 5px 8px;
+      border-radius: 999px;
+      color: #fff;
+    }
+    .badge.ok { background: var(--ok); }
+    .badge.fail { background: var(--fail); }
+    .badge.na { background: var(--na); }
+    .path {
+      margin: 4px 0 10px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .tests {
+      margin: 0 0 10px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .coverage-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+    .bar {
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      background: #e5ebf0;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .bar span {
+      display: block;
+      height: 100%;
+      background: linear-gradient(90deg, #2f80ed, #27ae60);
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+    }
+    .metric {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: #fff;
+    }
+    .note {
+      margin: 10px 0 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="top">
+      <h1>SmartGym - Estado de tests y cobertura</h1>
+      <p>Generado: 2026-04-02T07:52:59.278Z</p>
+      <div class="summary">
+        <div class="box"><div>Total servicios</div><div class="v">5</div></div>
+        <div class="box"><div>PASS</div><div class="v">1</div></div>
+        <div class="box"><div>FAIL</div><div class="v">0</div></div>
+        <div class="box"><div>Sin config</div><div class="v">4</div></div>
+      </div>
+    </section>
+    <section class="grid">
+        <section class="card ok">
+          <header>
+            <h2>auth-service</h2>
+            <span class="badge ok">PASS</span>
+          </header>
+          <p class="path">auth-service</p>
+          <p class="tests">27/27 tests OK</p>
+          <div class="coverage">
+            <div class="coverage-top">
+              <span>Coverage (lineas)</span>
+              <strong>48.1%</strong>
+            </div>
+            <div class="bar">
+              <span style="width:48.07%;"></span>
+            </div>
+          </div>
+          <div class="metrics"><div class="metric"><span>Lineas</span><strong>48.1%</strong></div><div class="metric"><span>Statements</span><strong>48.3%</strong></div><div class="metric"><span>Funciones</span><strong>56.0%</strong></div><div class="metric"><span>Branches</span><strong>54.0%</strong></div></div>
+          <p class="note">No se pudo ejecutar automaticamente (EPERM). Mostrando el ultimo resultado disponible.</p>
+        </section>
+      
+
+        <section class="card na">
+          <header>
+            <h2>gym-service</h2>
+            <span class="badge na">NO CONFIG</span>
+          </header>
+          <p class="path">gym-service</p>
+          <p class="tests">Sin resultados de tests</p>
+          <div class="coverage">
+            <div class="coverage-top">
+              <span>Coverage (lineas)</span>
+              <strong>N/A</strong>
+            </div>
+            <div class="bar">
+              <span style="width:0%;"></span>
+            </div>
+          </div>
+          <div class="metrics"><div class="metric"><span>Cobertura</span><strong>N/A</strong></div></div>
+          <p class="note">Sin script de test en package.json</p>
+        </section>
+      
+
+        <section class="card na">
+          <header>
+            <h2>api-gateway</h2>
+            <span class="badge na">NO CONFIG</span>
+          </header>
+          <p class="path">api-gateway</p>
+          <p class="tests">Sin resultados de tests</p>
+          <div class="coverage">
+            <div class="coverage-top">
+              <span>Coverage (lineas)</span>
+              <strong>N/A</strong>
+            </div>
+            <div class="bar">
+              <span style="width:0%;"></span>
+            </div>
+          </div>
+          <div class="metrics"><div class="metric"><span>Cobertura</span><strong>N/A</strong></div></div>
+          <p class="note">Sin script de test en package.json</p>
+        </section>
+      
+
+        <section class="card na">
+          <header>
+            <h2>training-service</h2>
+            <span class="badge na">NO CONFIG</span>
+          </header>
+          <p class="path">training-service</p>
+          <p class="tests">Sin resultados de tests</p>
+          <div class="coverage">
+            <div class="coverage-top">
+              <span>Coverage (lineas)</span>
+              <strong>N/A</strong>
+            </div>
+            <div class="bar">
+              <span style="width:0%;"></span>
+            </div>
+          </div>
+          <div class="metrics"><div class="metric"><span>Cobertura</span><strong>N/A</strong></div></div>
+          <p class="note">Sin script de test en package.json</p>
+        </section>
+      
+
+        <section class="card na">
+          <header>
+            <h2>frontend</h2>
+            <span class="badge na">NO CONFIG</span>
+          </header>
+          <p class="path">frontend</p>
+          <p class="tests">Sin resultados de tests</p>
+          <div class="coverage">
+            <div class="coverage-top">
+              <span>Coverage (lineas)</span>
+              <strong>N/A</strong>
+            </div>
+            <div class="bar">
+              <span style="width:0%;"></span>
+            </div>
+          </div>
+          <div class="metrics"><div class="metric"><span>Cobertura</span><strong>N/A</strong></div></div>
+          <p class="note">Sin script de test en package.json</p>
+        </section>
+      </section>
+  </main>
+</body>
+</html>

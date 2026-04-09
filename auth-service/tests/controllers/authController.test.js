@@ -1,5 +1,9 @@
 ﻿process.env.JWT_SECRET = 'test-jwt-secret';
 
+jest.mock('../../src/database/db', () => ({
+  query: jest.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
+}));
+
 jest.mock('../../src/models/User', () => ({
   create: jest.fn(),
   createProfile: jest.fn(),
@@ -327,6 +331,226 @@ describe('AuthController', () => {
       expect.objectContaining({ message: 'Contrasena actualizada correctamente' })
     );
   });
+
+  // ─── login ──────────────────────────────────────────────────────────────────
+
+  test('login returns 400 when email or password missing', async () => {
+    const req = { body: { email: 'ana@gmail.com' } };
+    const res = mockRes();
+
+    await AuthController.login(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ error: 'Email y password son requeridos' })
+    );
+  });
+
+  test('login returns 401 when user does not exist', async () => {
+    User.findByEmail.mockResolvedValue(null);
+
+    const req = { body: { email: 'noexiste@gmail.com', password: 'clave123' } };
+    const res = mockRes();
+
+    await AuthController.login(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ error: 'Credenciales inválidas' })
+    );
+  });
+
+  test('login returns 401 when password is wrong', async () => {
+    User.findByEmail.mockResolvedValue({ id: 1, email: 'ana@gmail.com', password: 'hash', role: 'member' });
+    User.verifyPassword.mockResolvedValue(false);
+
+    const req = { body: { email: 'ana@gmail.com', password: 'incorrecta' } };
+    const res = mockRes();
+
+    await AuthController.login(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(401);
+  });
+
+  test('login returns token on success', async () => {
+    User.findByEmail.mockResolvedValue({ id: 1, email: 'ana@gmail.com', name: 'Ana', password: 'hash', role: 'member' });
+    User.verifyPassword.mockResolvedValue(true);
+
+    const req = { body: { email: 'ana@gmail.com', password: 'correcta' } };
+    const res = mockRes();
+
+    await AuthController.login(req, res);
+
+    const payload = res.json.mock.calls[0][0];
+    expect(payload.message).toBe('Login exitoso');
+    expect(typeof payload.token).toBe('string');
+    expect(payload.token.length).toBeGreaterThan(10);
+  });
+
+  // ─── getProfile ─────────────────────────────────────────────────────────────
+
+  test('getProfile returns 404 when user does not exist', async () => {
+    User.findById.mockResolvedValue(null);
+
+    const req = { userId: 99 };
+    const res = mockRes();
+
+    await AuthController.getProfile(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ error: 'Usuario no encontrado' })
+    );
+  });
+
+  test('getProfile returns user data on success', async () => {
+    User.findById.mockResolvedValue({
+      id: 1, email: 'ana@gmail.com', name: 'Ana', role: 'member', created_at: new Date(),
+      first_name: 'Ana', last_name: 'Ruiz', phone: null, birth_date: null,
+      gender: null, height_cm: null, weight_kg: null, experience_level: 'beginner',
+      subscription_plan: null,
+    });
+
+    const req = { userId: 1 };
+    const res = mockRes();
+
+    await AuthController.getProfile(req, res);
+
+    const payload = res.json.mock.calls[0][0];
+    expect(payload.user.email).toBe('ana@gmail.com');
+    expect(payload.user.profile).not.toBeNull();
+  });
+
+  // ─── logout ─────────────────────────────────────────────────────────────────
+
+  test('logout returns success message', async () => {
+    const req = { headers: { authorization: 'Bearer sometoken' } };
+    const res = mockRes();
+
+    await AuthController.logout(req, res);
+
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Logout exitoso' })
+    );
+  });
+
+  test('logout works even without authorization header', async () => {
+    const req = { headers: {} };
+    const res = mockRes();
+
+    await AuthController.logout(req, res);
+
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Logout exitoso' })
+    );
+  });
+
+  // ─── updateProfile ───────────────────────────────────────────────────────────
+
+  test('updateProfile returns 400 when firstName is empty string', async () => {
+    const req = { userId: 1, body: { firstName: '   ' } };
+    const res = mockRes();
+
+    await AuthController.updateProfile(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ error: 'firstName no puede estar vacío' })
+    );
+  });
+
+  test('updateProfile returns 404 when profile not found', async () => {
+    User.updateProfile.mockResolvedValue(null);
+
+    const req = { userId: 99, body: { firstName: 'Ana' } };
+    const res = mockRes();
+
+    await AuthController.updateProfile(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+  });
+
+  test('updateProfile returns updated profile on success', async () => {
+    User.updateProfile.mockResolvedValue({
+      user_id: 1, first_name: 'Ana', last_name: 'Ruiz',
+      phone: null, birth_date: null, gender: null,
+      height_cm: null, weight_kg: null, experience_level: 'beginner',
+    });
+
+    const req = { userId: 1, body: { firstName: 'Ana', lastName: 'Ruiz' } };
+    const res = mockRes();
+
+    await AuthController.updateProfile(req, res);
+
+    const payload = res.json.mock.calls[0][0];
+    expect(payload.message).toBe('Perfil actualizado exitosamente');
+    expect(payload.profile.firstName).toBe('Ana');
+  });
+
+  // ─── createStaff ────────────────────────────────────────────────────────────
+
+  test('createStaff returns 400 when required fields are missing', async () => {
+    const req = { body: { email: 'trainer@smartgym.com' } };
+    const res = mockRes();
+
+    await AuthController.createStaff(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
+
+  test('createStaff creates trainer by default', async () => {
+    User.create.mockResolvedValue({ id: 5, email: 'trainer@smartgym.com', name: 'Carlos López', role: 'trainer' });
+    User.createProfile.mockResolvedValue({});
+
+    const req = {
+      body: { email: 'trainer@smartgym.com', password: 'pass123', firstName: 'Carlos', lastName: 'López' },
+    };
+    const res = mockRes();
+
+    await AuthController.createStaff(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(User.create).toHaveBeenCalledWith(
+      expect.objectContaining({ role: 'trainer' })
+    );
+  });
+
+  test('createStaff returns 409 when user already exists', async () => {
+    User.create.mockRejectedValue(new Error('El usuario ya existe'));
+
+    const req = {
+      body: { email: 'existente@smartgym.com', password: 'pass123', firstName: 'Juan', lastName: 'García' },
+    };
+    const res = mockRes();
+
+    await AuthController.createStaff(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(409);
+  });
+
+  // ─── listByRole ──────────────────────────────────────────────────────────────
+
+  test('listByRole returns 400 when role param is missing', async () => {
+    const req = { query: {} };
+    const res = mockRes();
+
+    await AuthController.listByRole(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ error: 'El parámetro role es requerido' })
+    );
+  });
+
+  test('listByRole returns users list', async () => {
+    const trainers = [{ id: 2, email: 'trainer@smartgym.com', role: 'trainer' }];
+    User.findByRole.mockResolvedValue(trainers);
+
+    const req = { query: { role: 'trainer' } };
+    const res = mockRes();
+
+    await AuthController.listByRole(req, res);
+
+    expect(res.json).toHaveBeenCalledWith({ users: trainers });
+  });
 });
-
-

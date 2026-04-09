@@ -1,0 +1,73 @@
+{
+  "generatedAt": "2026-04-02T07:52:59.278Z",
+  "services": [
+    {
+      "name": "auth-service",
+      "path": "auth-service",
+      "status": "passed",
+      "tests": {
+        "total": 27,
+        "passed": 27,
+        "failed": 0,
+        "pending": 0,
+        "suitesTotal": 2,
+        "suitesFailed": 0
+      },
+      "coverage": {
+        "lines": {
+          "pct": 48.07,
+          "covered": 125,
+          "total": 260
+        },
+        "statements": {
+          "pct": 48.28,
+          "covered": 127,
+          "total": 263
+        },
+        "functions": {
+          "pct": 56,
+          "covered": 14,
+          "total": 25
+        },
+        "branches": {
+          "pct": 53.97,
+          "covered": 95,
+          "total": 176
+        }
+      },
+      "note": "No se pudo ejecutar automaticamente (EPERM). Mostrando el ultimo resultado disponible."
+    },
+    {
+      "name": "gym-service",
+      "path": "gym-service",
+      "status": "not_configured",
+      "tests": null,
+      "coverage": null,
+      "note": "Sin script de test en package.json"
+    },
+    {
+      "name": "api-gateway",
+      "path": "api-gateway",
+      "status": "not_configured",
+      "tests": null,
+      "coverage": null,
+      "note": "Sin script de test en package.json"
+    },
+    {
+      "name": "training-service",
+      "path": "training-service",
+      "status": "not_configured",
+      "tests": null,
+      "coverage": null,
+      "note": "Sin script de test en package.json"
+    },
+    {
+      "name": "frontend",
+      "path": "frontend",
+      "status": "not_configured",
+      "tests": null,
+      "coverage": null,
+      "note": "Sin script de test en package.json"
+    }
+  ]
+}
