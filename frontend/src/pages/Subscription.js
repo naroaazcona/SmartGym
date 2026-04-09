@@ -6,12 +6,28 @@ import { apiFetch } from "../api/client.js";
 export async function SubscriptionPage() {
   const isOnline = Boolean(authStore.token);
 
-  // Leer parámetros de la URL
+  // Query y hash para compatibilidad (Stripe puede volver en cualquiera de los dos formatos)
+  const searchParams = new URLSearchParams(location.search || "");
   const hash = location.hash || "";
-  const success = hash.includes("success=true");
-  const cancelled = hash.includes("cancelled=true");
+  const [, hashQuery = ""] = hash.split("?");
+  const hashParams = new URLSearchParams(hashQuery);
 
-  // Obtener suscripción actual si está logueado
+  const success = searchParams.get("success") === "true" || hashParams.get("success") === "true";
+  const sessionId = searchParams.get("session_id") || hashParams.get("session_id");
+
+  // Confirmacion silenciosa del checkout al volver de Stripe
+  if (success && isOnline) {
+    try {
+      await apiFetch("/auth/subscription/confirm", {
+        method: "POST",
+        body: sessionId ? { sessionId } : {},
+      });
+    } catch {
+      // No mostramos barra de estado por requerimiento de UI.
+    }
+  }
+
+  // Obtener suscripcion actual para deshabilitar el plan activo
   let currentSubscription = null;
   if (isOnline) {
     try {
@@ -25,13 +41,32 @@ export async function SubscriptionPage() {
   const isActive = currentSubscription?.status === "active";
   const currentPlan = currentSubscription?.plan || null;
 
-  // Si el pago fue correcto, ir directamente al onboarding (sin botón intermedio)
-  if (success && isOnline) {
+  // Si viene de alta de usuario + pago correcto, continuar onboarding
+  const consumeOnboardingRequired = () => {
+    const userId = authStore.me?.id;
+    if (userId) {
+      const scopedKey = `onboarding_required_${userId}`;
+      if (localStorage.getItem(scopedKey) === "1") {
+        localStorage.removeItem(scopedKey);
+        localStorage.removeItem("onboarding_required");
+        return true;
+      }
+    }
+
+    if (localStorage.getItem("onboarding_required") === "1") {
+      localStorage.removeItem("onboarding_required");
+      return true;
+    }
+
+    return false;
+  };
+
+  const shouldGoToOnboarding = success && isOnline && consumeOnboardingRequired();
+  if (shouldGoToOnboarding) {
     navigate("/onboarding");
     return "";
   }
 
-  // Listener para botones de pago
   setTimeout(() => {
     document.querySelectorAll(".js-subscribe").forEach((btn) => {
       btn.addEventListener("click", async () => {
@@ -66,55 +101,26 @@ export async function SubscriptionPage() {
 
         <div style="text-align: center;">
           <div class="kicker">Planes</div>
-          <h1 style="font-size: 36px; font-weight: 1000; margin: 8px 0;">Elige tu suscripción</h1>
+          <h1 style="font-size: 36px; font-weight: 1000; margin: 8px 0;">Elige tu suscripcion</h1>
           <p class="sub">Sin permanencia. Cancela cuando quieras.</p>
         </div>
 
-        ${success ? `
-          <div class="card" style="background: #d1fae5; border-color: #6ee7b7; text-align: center; padding: 24px;">
-            <div style="font-size: 32px;">✅</div>
-            <h2 style="margin: 8px 0;">¡Pago completado!</h2>
-            <p class="sub">Tu suscripción ya está activa. Redirigiendo a tus preguntas...</p>
-          </div>
-        ` : ""}
-
-        ${cancelled ? `
-          <div class="card" style="background: #fee2e2; border-color: #fca5a5; text-align: center; padding: 24px;">
-            <div style="font-size: 32px;">❌</div>
-            <h2 style="margin: 8px 0;">Pago cancelado</h2>
-            <p class="sub">No se ha realizado ningún cargo. Puedes intentarlo de nuevo cuando quieras.</p>
-          </div>
-        ` : ""}
-
-        ${isActive ? `
-          <div class="card" style="background: #eff6ff; border-color: #93c5fd; text-align: center; padding: 24px;">
-            <div class="kicker">Suscripción activa</div>
-            <h2 style="margin: 8px 0;">Plan ${currentPlan === "basic" ? "Básico" : "Premium"}</h2>
-            <p class="sub">Tu suscripción está activa hasta el 
-              ${currentSubscription.current_period_end 
-                ? new Date(currentSubscription.current_period_end).toLocaleDateString("es-ES") 
-                : "—"}.
-            </p>
-          </div>
-        ` : ""}
-
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; max-width: 800px; margin: 0 auto; width: 100%;">
-          
-          <!-- Plan Básico -->
+
           <div class="card" style="display: flex; flex-direction: column; gap: 16px; padding: 32px;">
             <div>
-              <div class="kicker">Básico</div>
-              <div style="font-size: 40px; font-weight: 1000;">19,99€<span style="font-size: 16px; font-weight: 400;">/mes</span></div>
+              <div class="kicker">Basico</div>
+              <div style="font-size: 40px; font-weight: 1000;">19,99 &euro;<span style="font-size: 16px; font-weight: 400;">/mes</span></div>
             </div>
             <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px;">
-              <li>✅ Acceso a todas las clases</li>
-              <li>✅ Reservas online</li>
-              <li>✅ Plan de entrenamiento IA</li>
-              <li>✅ Clases premium</li>
-              <li>❌ Nutrición personalizada</li>
+              <li>&#x2705; Acceso a todas las clases</li>
+              <li>&#x2705; Reservas online</li>
+              <li>&#x2705; Plan de entrenamiento IA</li>
+              <li>&#x2705; Clases premium</li>
+              <li>&#x274C; Nutricion personalizada</li>
             </ul>
-            <button 
-              class="btn btn-ghost js-subscribe" 
+            <button
+              class="btn btn-ghost js-subscribe"
               data-plan="basic"
               ${currentPlan === "basic" && isActive ? "disabled" : ""}
             >
@@ -122,21 +128,20 @@ export async function SubscriptionPage() {
             </button>
           </div>
 
-          <!-- Plan Premium -->
           <div class="card" style="display: flex; flex-direction: column; gap: 16px; padding: 32px; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent);">
             <div>
-              <div class="kicker" style="color: var(--accent);"> Premium</div>
-              <div style="font-size: 40px; font-weight: 1000;">29,99€<span style="font-size: 16px; font-weight: 400;">/mes</span></div>
+              <div class="kicker" style="color: var(--accent);">Premium</div>
+              <div style="font-size: 40px; font-weight: 1000;">29,99 &euro;<span style="font-size: 16px; font-weight: 400;">/mes</span></div>
             </div>
             <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px;">
-              <li>✅ Acceso a todas las clases</li>
-              <li>✅ Reservas online</li>
-              <li>✅ Plan de entrenamiento IA</li>
-              <li>✅ Clases premium</li>
-              <li>✅ Nutrición personalizada</li>
+              <li>&#x2705; Acceso a todas las clases</li>
+              <li>&#x2705; Reservas online</li>
+              <li>&#x2705; Plan de entrenamiento IA</li>
+              <li>&#x2705; Clases premium</li>
+              <li>&#x2705; Nutricion personalizada</li>
             </ul>
-            <button 
-              class="btn btn-primary js-subscribe" 
+            <button
+              class="btn btn-primary js-subscribe"
               data-plan="premium"
               ${currentPlan === "premium" && isActive ? "disabled" : ""}
             >
@@ -149,3 +154,4 @@ export async function SubscriptionPage() {
     </div>
   `;
 }
+

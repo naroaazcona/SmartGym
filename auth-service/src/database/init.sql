@@ -98,7 +98,10 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_subscriptions_user_id ON subscriptions(user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_subscriptions_stripe_subscription_id
+    ON subscriptions(stripe_subscription_id)
+    WHERE stripe_subscription_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe_customer ON subscriptions(stripe_customer_id);
 
 -- Tabla de blacklist de tokens (para logout seguro y real invalidación de JWT)

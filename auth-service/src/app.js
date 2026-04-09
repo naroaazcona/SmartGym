@@ -28,11 +28,12 @@ app.post('/logout', authenticateToken, AuthController.logout);
 app.put('/profile', authenticateToken, AuthController.updateProfile);
 app.post('/staff', authenticateToken, authorizeRoles('admin'), AuthController.createStaff);
 app.get('/users', authenticateToken, authorizeRoles('admin'), AuthController.listByRole);
-app.get('/users/basic', authenticateToken, authorizeRoles('admin', 'trainer'), AuthController.listBasicUsers);
 
 //Rutas de pago
 app.post('/subscription/checkout', authenticateToken, PaymentController.createCheckoutSession);
+app.post('/subscription/confirm', authenticateToken, PaymentController.confirmCheckoutSession);
 app.get('/subscription/me', authenticateToken, PaymentController.getSubscription);
+app.post('/subscription/cancel', authenticateToken, PaymentController.cancelSubscription);
 
 
 

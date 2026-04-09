@@ -1,5 +1,6 @@
 import { Navbar } from "../components/Navbar.js";
 import { authService } from "../services/authService.js";
+import { authStore } from "../state/authStore.js";
 import { navigate } from "../router.js";
 
 const ALLOWED_EMAIL_PROVIDERS = ["gmail", "outlook", "yahoo"];
@@ -153,6 +154,12 @@ export async function LoginPage() {
 
       try {
         await authService.register(payload);
+        const userId = authStore.me?.id;
+        if (userId) {
+          localStorage.setItem(`onboarding_required_${userId}`, "1");
+        } else {
+          localStorage.setItem("onboarding_required", "1");
+        }
         // Nuevo usuario -> primero pago de suscripcion con Stripe
         navigate("/suscripcion");
       } catch (ex) {

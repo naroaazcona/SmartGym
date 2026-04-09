@@ -4,7 +4,6 @@ const crypto = require('crypto');
 
 const JWT_SECRET = process.env.JWT_SECRET; // Garantizado por el check en auth.js
 const JWT_EXPIRES_IN = '24h';
-const ALLOWED_EMAIL_PROVIDERS = ['gmail', 'outlook', 'yahoo'];
 
 // Normaliza números de teléfono españoles a formato +34 XXXXXXXXX
 function normalizeEsPhone(value = '') {

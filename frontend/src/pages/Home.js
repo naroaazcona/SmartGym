@@ -70,13 +70,11 @@ export async function HomePage() {
     });
     return Array.isArray(res) ? res.map(normalizeClass).filter((c) => c.startsAt) : [];
   };
-  const fetchUpcomingClasses = async (fromDate, daysAhead = 30) => {
+  const fetchUpcomingClasses = async (fromDate) => {
     const from = new Date(fromDate);
     from.setHours(0, 0, 0, 0);
-    const to = new Date(from.getTime() + daysAhead * dayMs - 1);
     const res = await gymService.listClasses({
       from: from.toISOString(),
-      to: to.toISOString(),
     });
     return Array.isArray(res)
       ? res
@@ -117,9 +115,7 @@ export async function HomePage() {
   /* === Datos en vivo === */
   let weekStart = startOfWeek(new Date());
   const weekClasses = await fetchWeekClasses(weekStart).catch(() => []);
-  const upcomingClasses = weekClasses.length
-    ? weekClasses
-    : await fetchUpcomingClasses(new Date(), 30).catch(() => []);
+  const upcomingClasses = await fetchUpcomingClasses(new Date()).catch(() => []);
   const showcaseClasses = upcomingClasses.length ? upcomingClasses : buildFallbackClasses();
   const hasRealClasses = upcomingClasses.length > 0;
 
@@ -294,26 +290,28 @@ export async function HomePage() {
 
   /* === Listeners diferidos === */
   setTimeout(() => {
+    const goToUserArea = () => {
+      const r = authStore.role;
+      if (r === "admin") navigate("/admin");
+      else if (r === "trainer") navigate("/trainer");
+      else if (r === "member") navigate("/member");
+      else navigate("/login");
+    };
+
     document.querySelectorAll(".js-go-login").forEach((btn) => {
       btn.addEventListener("click", () => navigate("/login"));
     });
     document.querySelectorAll(".js-quick-login").forEach((card) => {
-      card.addEventListener("click", () => navigate("/login"));
+      card.addEventListener("click", () => goToUserArea());
       card.addEventListener("keydown", (event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
-          navigate("/login");
+          goToUserArea();
         }
       });
     });
     document.querySelectorAll(".js-go-area").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const r = authStore.role;
-        if (r === "admin") navigate("/admin");
-        else if (r === "trainer") navigate("/trainer");
-        else if (r === "member") navigate("/member");
-        else navigate("/login");
-      });
+      btn.addEventListener("click", () => goToUserArea());
     });
 
     const calendarRoot = document.querySelector("#hero-calendar");

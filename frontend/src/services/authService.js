@@ -86,6 +86,10 @@ export const authService = {
     return res?.users || [];
   },
 
+  async cancelSubscription() {
+    return authApi.cancelSubscription();
+  },
+
   async health() {
     return authApi.health();
   },

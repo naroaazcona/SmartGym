@@ -2,6 +2,7 @@ import { Navbar } from "../components/Navbar.js";
 import { authService } from "../services/authService.js";
 import { authStore } from "../state/authStore.js";
 import { navigate } from "../router.js";
+import { apiFetch } from "../api/client.js";
 
 const formatDateForInput = (value) => {
   if (!value) return "";
@@ -79,6 +80,19 @@ export async function ProfilePage() {
   const me = authStore.me || {};
   const profile = me.profile || {};
 
+  // Cargar suscripción activa
+  let currentSubscription = null;
+  try {
+    const res = await apiFetch("/auth/subscription/me");
+    currentSubscription = res?.subscription || null;
+  } catch { /* sin suscripción */ }
+
+  const isActiveSub = currentSubscription?.status === "active";
+  const subPlan = currentSubscription?.plan || null;
+  const subEnd = currentSubscription?.current_period_end
+    ? new Date(currentSubscription.current_period_end).toLocaleDateString("es-ES")
+    : null;
+
   const birthDate = formatDateForInput(profile.birthDate);
   const phoneDisplay = normalizeEsPhone(profile.phone) || profile.phone || "-";
   const phoneDigits = getLocalPhoneDigits(profile.phone);
@@ -123,6 +137,26 @@ export async function ProfilePage() {
     };
 
     attachPhoneSanitizer(form?.phone);
+
+    // Cancelar suscripción
+    const cancelSubBtn = document.querySelector("#profile-cancel-sub");
+    cancelSubBtn?.addEventListener("click", async () => {
+      if (!confirm("¿Seguro que quieres cancelar tu suscripción? Perderás el acceso al final del periodo actual.")) return;
+      cancelSubBtn.disabled = true;
+      cancelSubBtn.textContent = "Cancelando...";
+      try {
+        await authService.cancelSubscription();
+        const subCard = document.querySelector("#profile-sub-card");
+        if (subCard) subCard.innerHTML = `
+          <div class="kicker">Suscripción</div>
+          <p class="sub" style="margin:8px 0 0;">Sin suscripción activa. <a href="#/suscripcion" style="color:var(--accent); font-weight:700;">Ver planes →</a></p>
+        `;
+      } catch (ex) {
+        cancelSubBtn.disabled = false;
+        cancelSubBtn.textContent = "Cancelar suscripción";
+        alert(ex?.message || "No se pudo cancelar la suscripción.");
+      }
+    });
 
     form?.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -229,6 +263,28 @@ export async function ProfilePage() {
                 <div class="kv"><span>Altura / Peso</span><span><span data-profile-height>${profile.heightCm ?? "-"}</span> cm · <span data-profile-weight>${profile.weightKg ?? "-"}</span> kg</span></div>
               </div>
 
+              <div class="profile-section-title" style="margin-top:16px;">
+                <h3>Suscripción</h3>
+              </div>
+
+              <div id="profile-sub-card" style="padding:14px; border-radius:12px; background:var(--surface-2); border:1px solid var(--border); display:flex; flex-direction:column; gap:10px;">
+                ${isActiveSub ? `
+                  <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                    <div>
+                      <div style="font-weight:700; font-size:15px;">Plan ${subPlan === "premium" ? "Premium" : "Básico"} · activo</div>
+                      ${subEnd ? `<div class="dim" style="font-size:13px;">Renovación: ${subEnd}</div>` : ""}
+                    </div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                      <a class="btn btn-ghost" href="#/suscripcion" style="font-size:13px;">Cambiar plan</a>
+                      <button id="profile-cancel-sub" class="btn btn-ghost" style="font-size:13px; color:#e53e3e; border-color:#e53e3e;">Cancelar suscripción</button>
+                    </div>
+                  </div>
+                ` : `
+                  <div class="kicker">Sin suscripción activa</div>
+                  <p class="sub" style="margin:0;">Accede a clases, planes de entrenamiento IA y más. <a href="#/suscripcion" style="color:var(--accent); font-weight:700;">Ver planes →</a></p>
+                `}
+              </div>
+
               <div class="profile-section-title" style="margin-top:4px;">
                 <h3>Editar perfil</h3>
               </div>
@@ -280,7 +336,6 @@ export async function ProfilePage() {
 
                 <div class="profile-actions">
                   <button id="profile-save" class="btn btn-primary" type="submit">Guardar cambios</button>
-                  <a class="btn btn-ghost" href="#/suscripcion">Cambiar suscripción</a>
                   <span id="profile-msg" class="profile-success"></span>
                 </div>
 

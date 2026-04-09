@@ -41,5 +41,8 @@ export const authApi = {
   listByRole: (role) =>
     apiFetch(`/auth/users?role=${role}`),
 
+  cancelSubscription: () =>
+    apiFetch("/auth/subscription/cancel", { method: "POST" }),
+
   health: () => apiFetch("/auth/health"),
 };

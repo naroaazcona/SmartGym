@@ -1,12 +1,13 @@
 const stripeFactory = require("stripe");
 const pool = require("../database/db");
 
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "";
-const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "";
+const STRIPE_SECRET_KEY = (process.env.STRIPE_SECRET_KEY || "").trim();
+const STRIPE_WEBHOOK_SECRET = (process.env.STRIPE_WEBHOOK_SECRET || "").trim();
+const FRONTEND_URL = (process.env.FRONTEND_URL || "http://localhost:8080").trim();
 
 const PLAN_CONFIG = {
-  basic: process.env.STRIPE_PRICE_BASIC,
-  premium: process.env.STRIPE_PRICE_PREMIUM,
+  basic: (process.env.STRIPE_PRICE_BASIC || "").trim(),
+  premium: (process.env.STRIPE_PRICE_PREMIUM || "").trim(),
 };
 
 let stripeClient = null;
@@ -23,6 +24,20 @@ function getStripeClient() {
 
 const isPriceId = (value = "") => String(value).startsWith("price_");
 const isProductId = (value = "") => String(value).startsWith("prod_");
+const isValidPlan = (value = "") => ["basic", "premium"].includes(String(value));
+
+function getFrontendBaseUrl() {
+  return (FRONTEND_URL || "http://localhost:8080").replace(/\/+$/, "");
+}
+
+function getStripeRedirectUrls() {
+  const frontendBase = getFrontendBaseUrl();
+  return {
+    // session_id en query real (location.search), no en hash, para asegurar sustitucion de Stripe.
+    successUrl: `${frontendBase}/?success=true&session_id={CHECKOUT_SESSION_ID}#/suscripcion`,
+    cancelUrl: `${frontendBase}/#/suscripcion?cancelled=true`,
+  };
+}
 
 async function resolveStripePriceId(stripe, plan) {
   const configuredValue = PLAN_CONFIG[plan];
@@ -74,6 +89,64 @@ async function resolveStripePriceId(stripe, plan) {
   );
 }
 
+async function inferPlanFromStripeSubscription(stripe, stripeSubscription, fallbackPlan = null) {
+  const itemPrices = Array.isArray(stripeSubscription?.items?.data)
+    ? stripeSubscription.items.data.map((item) => item?.price?.id).filter(Boolean)
+    : [];
+
+  if (itemPrices.length) {
+    const basicPriceId = await resolveStripePriceId(stripe, "basic");
+    const premiumPriceId = await resolveStripePriceId(stripe, "premium");
+
+    if (itemPrices.includes(premiumPriceId)) return "premium";
+    if (itemPrices.includes(basicPriceId)) return "basic";
+  }
+
+  return isValidPlan(fallbackPlan) ? fallbackPlan : null;
+}
+
+async function findLatestActiveStripeSubscription(stripe, stripeCustomerId) {
+  if (!stripeCustomerId) return null;
+
+  const subscriptions = await stripe.subscriptions.list({
+    customer: stripeCustomerId,
+    status: "all",
+    limit: 20,
+    expand: ["data.items.data.price"],
+  });
+
+  const eligible = (subscriptions?.data || [])
+    .filter((sub) => ["active", "trialing", "past_due", "unpaid"].includes(sub?.status))
+    .sort((a, b) => (b?.created || 0) - (a?.created || 0));
+
+  return eligible[0] || null;
+}
+
+async function upsertSubscription({
+  userId,
+  stripeCustomerId,
+  stripeSubscriptionId,
+  plan,
+  status = "active",
+  currentPeriodEnd = null,
+}) {
+  const result = await pool.query(
+    `INSERT INTO subscriptions (user_id, stripe_customer_id, stripe_subscription_id, plan, status, current_period_end)
+     VALUES ($1, $2, $3, $4, $5, to_timestamp($6))
+     ON CONFLICT (user_id) DO UPDATE SET
+       stripe_customer_id = EXCLUDED.stripe_customer_id,
+       stripe_subscription_id = EXCLUDED.stripe_subscription_id,
+       plan = EXCLUDED.plan,
+       status = EXCLUDED.status,
+       current_period_end = EXCLUDED.current_period_end,
+       updated_at = CURRENT_TIMESTAMP
+     RETURNING *`,
+    [userId, stripeCustomerId || null, stripeSubscriptionId || null, plan, status, currentPeriodEnd]
+  );
+
+  return result.rows[0] || null;
+}
+
 class PaymentController {
   // Crear sesion de pago en Stripe
   static async createCheckoutSession(req, res) {
@@ -95,11 +168,16 @@ class PaymentController {
 
       // Buscar si el usuario ya tiene un customer_id en Stripe
       const result = await pool.query(
-        "SELECT stripe_customer_id FROM subscriptions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1",
+        `SELECT stripe_customer_id, status, stripe_subscription_id
+         FROM subscriptions
+         WHERE user_id = $1
+         ORDER BY created_at DESC
+         LIMIT 1`,
         [req.userId]
       );
 
-      let customerId = result.rows[0]?.stripe_customer_id || null;
+      const existingSubscription = result.rows[0] || null;
+      let customerId = existingSubscription?.stripe_customer_id || null;
 
       // Si no tiene customer en Stripe, crearlo
       if (!customerId) {
@@ -119,15 +197,39 @@ class PaymentController {
       }
 
       // Crear sesion de pago
+      const { successUrl, cancelUrl } = getStripeRedirectUrls();
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
         payment_method_types: ["card"],
         line_items: [{ price: priceId, quantity: 1 }],
         mode: "subscription",
-        success_url: "http://localhost:8080/#/suscripcion?success=true",
-        cancel_url: "http://localhost:8080/#/suscripcion?cancelled=true",
+        success_url: successUrl,
+        cancel_url: cancelUrl,
         metadata: { userId: String(req.userId), plan },
       });
+
+      // Persistimos estado pendiente para no perder el customer id si el webhook no llega.
+      // Si ya hay una suscripcion activa, no degradamos su estado a pending.
+      const hasActiveSubscription =
+        existingSubscription?.status === "active" && Boolean(existingSubscription?.stripe_subscription_id);
+
+      if (hasActiveSubscription) {
+        await pool.query(
+          `UPDATE subscriptions
+           SET stripe_customer_id = $2, updated_at = CURRENT_TIMESTAMP
+           WHERE user_id = $1`,
+          [req.userId, customerId]
+        );
+      } else {
+        await upsertSubscription({
+          userId: req.userId,
+          stripeCustomerId: customerId,
+          stripeSubscriptionId: null,
+          plan,
+          status: "pending",
+          currentPeriodEnd: null,
+        });
+      }
 
       res.json({ url: session.url });
     } catch (error) {
@@ -148,6 +250,119 @@ class PaymentController {
       }
 
       res.status(500).json({ error: "Error al crear la sesion de pago" });
+    }
+  }
+
+  // Confirmar checkout al volver de Stripe (fallback robusto cuando el webhook no llega)
+  static async confirmCheckoutSession(req, res) {
+    try {
+      const stripe = getStripeClient();
+      if (!stripe || !PLAN_CONFIG.basic || !PLAN_CONFIG.premium) {
+        return res.status(503).json({
+          error: "Pagos Stripe no configurados en este entorno.",
+        });
+      }
+
+      const sessionId = String(req.body?.sessionId || req.query?.session_id || "").trim();
+      const hasValidSessionId = sessionId && sessionId.startsWith("cs_");
+      const isTemplateSessionId = sessionId.includes("CHECKOUT_SESSION_ID");
+
+      if (sessionId && !hasValidSessionId && !isTemplateSessionId) {
+        return res.status(400).json({ error: "sessionId invalido" });
+      }
+
+      // Flujo principal: confirmacion con sessionId real.
+      if (hasValidSessionId) {
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+        if (!session || session.mode !== "subscription") {
+          return res.status(400).json({ error: "La sesion no corresponde a una suscripcion." });
+        }
+
+        const metadataUserId = Number(session?.metadata?.userId);
+        const plan = session?.metadata?.plan;
+
+        if (!Number.isInteger(metadataUserId) || !isValidPlan(plan)) {
+          return res.status(400).json({ error: "Metadata de sesion invalida." });
+        }
+
+        if (metadataUserId !== Number(req.userId)) {
+          return res.status(403).json({ error: "No puedes confirmar una sesion de otro usuario." });
+        }
+
+        if (!session.subscription) {
+          return res.status(400).json({ error: "La sesion no tiene subscription asociada." });
+        }
+
+        // Para modo suscripcion, "complete" indica checkout finalizado.
+        if (session.status !== "complete") {
+          return res.status(409).json({ error: "El pago aun no se ha completado." });
+        }
+
+        const stripeSub = await stripe.subscriptions.retrieve(session.subscription);
+        const subscription = await upsertSubscription({
+          userId: metadataUserId,
+          stripeCustomerId: session.customer,
+          stripeSubscriptionId: session.subscription,
+          plan,
+          status: "active",
+          currentPeriodEnd: stripeSub?.current_period_end || null,
+        });
+
+        return res.json({
+          message: "Suscripcion confirmada correctamente.",
+          subscription,
+        });
+      }
+
+      // Fallback robusto: si no llega sessionId (o llega plantilla), buscamos por customer.
+      const existing = await pool.query(
+        `SELECT stripe_customer_id, plan
+         FROM subscriptions
+         WHERE user_id = $1
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        [req.userId]
+      );
+
+      const stripeCustomerId = existing.rows[0]?.stripe_customer_id || null;
+      const fallbackPlan = existing.rows[0]?.plan || null;
+
+      if (!stripeCustomerId) {
+        return res.status(400).json({
+          error: "No se pudo confirmar la suscripcion: falta sessionId valido y customer asociado.",
+        });
+      }
+
+      const latestStripeSub = await findLatestActiveStripeSubscription(stripe, stripeCustomerId);
+      if (!latestStripeSub) {
+        return res.status(404).json({
+          error: "No se encontro una suscripcion activa en Stripe para este usuario.",
+        });
+      }
+
+      const inferredPlan = await inferPlanFromStripeSubscription(stripe, latestStripeSub, fallbackPlan);
+      if (!isValidPlan(inferredPlan)) {
+        return res.status(409).json({
+          error: "No se pudo inferir el plan contratado desde Stripe.",
+        });
+      }
+
+      const subscription = await upsertSubscription({
+        userId: req.userId,
+        stripeCustomerId: stripeCustomerId,
+        stripeSubscriptionId: latestStripeSub.id,
+        plan: inferredPlan,
+        status: "active",
+        currentPeriodEnd: latestStripeSub?.current_period_end || null,
+      });
+
+      return res.json({
+        message: "Suscripcion confirmada correctamente (fallback).",
+        subscription,
+      });
+    } catch (error) {
+      console.error("Error confirmando sesion de checkout:", error);
+      return res.status(500).json({ error: "No se pudo confirmar la suscripcion." });
     }
   }
 
@@ -189,38 +404,86 @@ class PaymentController {
       return res.status(400).json({ error: `Webhook error: ${err.message}` });
     }
 
-    if (event.type === "checkout.session.completed") {
-      const session = event.data.object;
-      const userId = session.metadata.userId;
-      const plan = session.metadata.plan;
+    try {
+      if (event.type === "checkout.session.completed") {
+        const session = event.data.object || {};
+        const userId = Number(session?.metadata?.userId);
+        const plan = session?.metadata?.plan;
 
-      // Obtener detalles de la suscripcion de Stripe
-      const stripeSub = await stripe.subscriptions.retrieve(session.subscription);
+        if (!Number.isInteger(userId) || !["basic", "premium"].includes(plan)) {
+          return res.status(400).json({ error: "Metadata de suscripción inválida en webhook." });
+        }
 
-      await pool.query(
-        `INSERT INTO subscriptions (user_id, stripe_customer_id, stripe_subscription_id, plan, status, current_period_end)
-         VALUES ($1, $2, $3, $4, $5, to_timestamp($6))
-         ON CONFLICT (user_id) DO UPDATE SET
-           stripe_customer_id = $2,
-           stripe_subscription_id = $3,
-           plan = $4,
-           status = $5,
-           current_period_end = to_timestamp($6),
-           updated_at = CURRENT_TIMESTAMP`,
-        [userId, session.customer, session.subscription, plan, "active", stripeSub.current_period_end]
-      );
-    }
+        if (!session.subscription) {
+          return res.status(400).json({ error: "checkout.session.completed sin subscription id." });
+        }
 
-    if (event.type === "customer.subscription.deleted") {
-      const sub = event.data.object;
-      await pool.query(
-        `UPDATE subscriptions SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP
-         WHERE stripe_subscription_id = $1`,
-        [sub.id]
-      );
+        // Obtener detalles de la suscripcion de Stripe
+        const stripeSub = await stripe.subscriptions.retrieve(session.subscription);
+        await upsertSubscription({
+          userId,
+          stripeCustomerId: session.customer,
+          stripeSubscriptionId: session.subscription,
+          plan,
+          status: "active",
+          currentPeriodEnd: stripeSub.current_period_end,
+        });
+      } else if (event.type === "customer.subscription.deleted") {
+        const sub = event.data.object || {};
+        if (sub.id) {
+          await pool.query(
+            `UPDATE subscriptions SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP
+             WHERE stripe_subscription_id = $1`,
+            [sub.id]
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Error procesando webhook Stripe:", error);
+      return res.status(500).json({ error: "Error procesando webhook de Stripe" });
     }
 
     res.json({ received: true });
+  }
+
+  // Cancelar suscripción activa del usuario
+  static async cancelSubscription(req, res) {
+    try {
+      const stripe = getStripeClient();
+
+      // Buscar suscripción activa del usuario
+      const result = await pool.query(
+        `SELECT stripe_subscription_id FROM subscriptions
+         WHERE user_id = $1 AND status = 'active'
+         ORDER BY created_at DESC LIMIT 1`,
+        [req.userId]
+      );
+
+      if (!result.rows.length || !result.rows[0].stripe_subscription_id) {
+        return res.status(404).json({ error: "No tienes una suscripción activa." });
+      }
+
+      const stripeSubscriptionId = result.rows[0].stripe_subscription_id;
+
+      // Si Stripe está configurado, cancelar también en Stripe al final del periodo
+      if (stripe && stripeSubscriptionId.startsWith("sub_")) {
+        await stripe.subscriptions.update(stripeSubscriptionId, {
+          cancel_at_period_end: true,
+        });
+      }
+
+      // Marcar como cancelada en nuestra BD
+      await pool.query(
+        `UPDATE subscriptions SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP
+         WHERE user_id = $1 AND status = 'active'`,
+        [req.userId]
+      );
+
+      res.json({ message: "Suscripción cancelada correctamente." });
+    } catch (error) {
+      console.error("Error cancelando suscripción:", error);
+      res.status(500).json({ error: "Error al cancelar la suscripción." });
+    }
   }
 }
 
