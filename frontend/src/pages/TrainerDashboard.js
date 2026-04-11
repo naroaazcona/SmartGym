@@ -108,6 +108,56 @@ export async function TrainerDashboard() {
     const refreshBtn = document.querySelector("#trainer-refresh");
     let current = myClasses.slice();
     let selectedClassId = null;
+    const attendeeNameCache = new Map();
+
+    const toUserId = (value) => {
+      const id = Number(value);
+      return Number.isInteger(id) && id > 0 ? id : null;
+    };
+
+    const formatUserName = (user = {}) => {
+      const firstName = String(user.first_name || user.firstName || "").trim();
+      const lastName = String(user.last_name || user.lastName || "").trim();
+      const fullName = `${firstName} ${lastName}`.trim();
+      return fullName || String(user.name || user.email || "").trim();
+    };
+
+    const hydrateReservationsWithNames = async (items = []) => {
+      const reservations = Array.isArray(items) ? items : [];
+      if (!reservations.length) return [];
+
+      const missingIds = [...new Set(
+        reservations
+          .map((item) => toUserId(item.user_id))
+          .filter((id) => id && !attendeeNameCache.has(id))
+      )];
+
+      if (missingIds.length) {
+        try {
+          const users = await authService.listBasicUsers(missingIds);
+          users.forEach((user) => {
+            const id = toUserId(user.id);
+            if (!id) return;
+            const displayName = formatUserName(user);
+            attendeeNameCache.set(id, displayName || `Usuario ${id}`);
+          });
+        } catch (err) {
+          console.error("No se pudieron cargar nombres de reservas:", err);
+        }
+      }
+
+      return reservations.map((item) => {
+        const userId = toUserId(item.user_id);
+        const displayName =
+          (userId ? attendeeNameCache.get(userId) : "") ||
+          item.attendee_name ||
+          (userId ? `Usuario ${userId}` : "Usuario");
+        return {
+          ...item,
+          attendee_name: displayName,
+        };
+      });
+    };
 
     const statusLabel = {
       booked: "Pendiente",
@@ -135,7 +185,7 @@ export async function TrainerDashboard() {
         .map(
           (r) => `
           <li class="row">
-            <span>#${r.id} · Usuario ${r.user_id}</span>
+            <span>#${r.id} · ${r.attendee_name || `Usuario ${r.user_id}`}</span>
             <span class="pill">${r.status}</span>
           </li>`
         )
@@ -161,7 +211,7 @@ export async function TrainerDashboard() {
           (r) => `
           <li class="row" style="display:flex; flex-direction:column; gap:8px; align-items:stretch;">
             <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-              <span>#${r.id} · Usuario ${r.user_id}</span>
+              <span>#${r.id} · ${r.attendee_name || `Usuario ${r.user_id}`}</span>
               <span class="pill">${statusLabel[r.status] || r.status}</span>
             </div>
             <div style="display:flex; flex-wrap:wrap; gap:6px;">
@@ -182,11 +232,12 @@ export async function TrainerDashboard() {
     const loadReservations = async (classId) => {
       selectedClassId = classId;
       const reservations = await gymService.listReservations(classId);
+      const reservationsWithNames = await hydrateReservationsWithNames(reservations);
       if (resTitle) resTitle.textContent = `Reservas de la clase ${classId}`;
-      renderAttendanceReservations(reservations);
+      renderAttendanceReservations(reservationsWithNames);
       if (resStatus) {
-        const pending = reservations.filter((item) => item.status === "booked").length;
-        resStatus.textContent = `${reservations.length} reservas activas · ${pending} pendientes de pase de lista`;
+        const pending = reservationsWithNames.filter((item) => item.status === "booked").length;
+        resStatus.textContent = `${reservationsWithNames.length} reservas activas · ${pending} pendientes de pase de lista`;
       }
     };
 

@@ -9,7 +9,7 @@ const buildQuery = (params = {}) => {
 
 export const trainingApi = {
   getMyRecommendation: (params = {}) =>
-    apiFetch(`/training/recommendations/me${buildQuery(params)}`),
+    apiFetch(`/training/recommendations/me/generate${buildQuery(params)}`),
   getSavedRecommendation: (params = {}) =>
     apiFetch(`/training/recommendations/me/saved${buildQuery(params)}`),
   saveMyRecommendation: (payload = {}) =>
