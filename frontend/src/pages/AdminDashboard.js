@@ -159,7 +159,7 @@ export async function AdminDashboard() {
       }
     };
 
-    const renderReservations = (items) => {
+    const renderReservations = (items, userMap = {}) => {
       if (!resList) return;
       if (!items.length) {
         resList.innerHTML = "<p class='sub'>Sin reservas para esta clase.</p>";
@@ -167,11 +167,16 @@ export async function AdminDashboard() {
       }
       resList.innerHTML = items
         .map(
-          (r) => `
+          (r) => {
+            const userName = userMap[r.user_id]
+              ? `${userMap[r.user_id].name} <span class="dim" style="font-size:12px;">(#${r.user_id})</span>`
+              : `Usuario ${r.user_id}`;
+            return `
           <li class="row">
-            <span>#${r.id} · Usuario ${r.user_id}</span>
+            <span>#${r.id} · ${userName}</span>
             <span class="pill">${r.status}</span>
-          </li>`
+          </li>`;
+          }
         )
         .join("");
     };
@@ -237,9 +242,15 @@ export async function AdminDashboard() {
       try {
         if (action === "reservations") {
           toggle(true, "Cargando...");
-          const reservations = await gymService.listReservations(id);
+          const [reservations, members, trainers] = await Promise.all([
+            gymService.listReservations(id),
+            authService.listByRole("member").catch(() => []),
+            authService.listByRole("trainer").catch(() => []),
+          ]);
+          const userMap = {};
+          [...members, ...trainers].forEach((u) => { userMap[u.id] = u; });
           if (resTitle) resTitle.textContent = `Reservas clase ${id}`;
-          renderReservations(reservations);
+          renderReservations(reservations, userMap);
           if (resStatus) resStatus.textContent = `${reservations.length} reservas encontradas.`;
         }
 
@@ -476,6 +487,55 @@ export async function AdminDashboard() {
       classTypeErrorEl.textContent = classTypesError || (classTypes.length ? "" : "No hay tipos de clase todavía. Crea uno abajo.");
       if (classTypesError) classTypeErrorEl.style.color = "#fca5a5";
     }
+
+    // ── Gestión de miembros ──────────────────────────────────────────────────
+    const membersListEl  = document.querySelector("#admin-members-list");
+    const membersCountEl = document.querySelector("#admin-members-count");
+    const membersSearchEl = document.querySelector("#admin-members-search");
+
+    const renderMembers = (members, filter = "") => {
+      if (!membersListEl) return;
+      const filtered = filter
+        ? members.filter((m) => {
+            const name = (m.first_name || m.name || "").toLowerCase();
+            const email = (m.email || "").toLowerCase();
+            return name.includes(filter.toLowerCase()) || email.includes(filter.toLowerCase());
+          })
+        : members;
+
+      if (!filtered.length) {
+        membersListEl.innerHTML = "<li class='row'><span class='sub'>Sin resultados.</span></li>";
+        return;
+      }
+
+      membersListEl.innerHTML = filtered.map((m) => `
+        <li class="row" style="align-items:center; justify-content:space-between; gap:12px;">
+          <div style="flex:1; min-width:0;">
+            <div style="font-weight:700;">${m.first_name ? `${m.first_name} ${m.last_name || ""}` : m.name || "—"}</div>
+            <div class="dim" style="font-size:13px;">${m.email} · ID #${m.id}</div>
+          </div>
+          <span class="pill" style="background:var(--surface-2); color:var(--muted); font-size:12px;">${m.role}</span>
+        </li>`).join("");
+    };
+
+    const loadMembers = async () => {
+      if (!membersListEl) return;
+      membersListEl.innerHTML = "<li class='row'><span class='sub'>Cargando...</span></li>";
+      try {
+        const members = await authService.listByRole("member").catch(() => []);
+        if (membersCountEl) membersCountEl.textContent = members.length;
+        renderMembers(members);
+
+        membersSearchEl?.addEventListener("input", (e) => {
+          renderMembers(members, e.target.value.trim());
+        });
+      } catch (err) {
+        if (membersListEl) membersListEl.innerHTML = "<li class='row'><span style='color:#fca5a5;'>Error al cargar miembros.</span></li>";
+      }
+    };
+
+    loadMembers();
+
   }, 0);
 
   return `
@@ -615,6 +675,23 @@ export async function AdminDashboard() {
               <div class="kicker" id="admin-res-title">Reservas</div>
               <div class="dim" id="admin-res-status">Pulsa en "Reservas" de una clase para ver los asistentes.</div>
               <ul class="list" id="admin-reservations" style="margin-top:10px;"></ul>
+            </div>
+
+            <!-- MIEMBROS -->
+            <div class="card" style="display:flex; flex-direction:column; gap:12px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                <div>
+                  <div class="kicker">Miembros registrados</div>
+                  <div class="dim" style="font-size:13px;">Total: <span id="admin-members-count">—</span> miembros</div>
+                </div>
+              </div>
+              <input
+                id="admin-members-search"
+                type="text"
+                placeholder="Buscar por nombre o email..."
+                style="padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--surface-2); color:var(--text); font-size:14px;"
+              />
+              <ul class="list" id="admin-members-list" style="margin-top:4px;"></ul>
             </div>
 
             <!-- EDITAR CLASE -->

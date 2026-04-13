@@ -33,7 +33,8 @@ export function Navbar() {
           <div class="navlinks">
             ${!isTrainer ? `<a class="linkbtn" href="#/">Inicio</a>` : ``}
             ${!isOnline ? `<a class="linkbtn" href="#/login">Acceder</a>` : ``}
-            ${role === "member" ? `<a class="linkbtn" href="#/member">Reservas</a>` : ``}
+            ${role === "member" ? `<a class="linkbtn" href="#/member">Clases</a>` : ``}
+            ${role === "member" ? `<a class="linkbtn" href="#/member-ia">Entrenamientos y Dieta</a>` : ``}
             ${role === "member" ? `<a class="linkbtn" href="#/mis-reservas">Mis reservas</a>` : ``}
             ${role === "trainer" ? `<a class="linkbtn" href="#/trainer">${trainerTabLabel}</a>` : ``}
             ${role === "admin" ? `<a class="linkbtn" href="#/admin">Admin</a>` : ``}

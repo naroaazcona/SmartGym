@@ -1504,3 +1504,31 @@ input:focus, select:focus, textarea:focus{
     transition: none;
   }
 }
+
+/* PROFILE READABILITY */
+.profile-card{
+  background: linear-gradient(180deg, #ffffff, #f6f8fd) !important;
+  color: #000 !important;
+  border: 1px solid rgba(13, 26, 45, 0.14) !important;
+}
+
+.profile-card .profile-name,
+.profile-card .profile-email,
+.profile-card .profile-chip,
+.profile-card .metric-meta .val,
+.profile-card .kv span:last-child,
+.profile-card .profile-section-title h3{
+  color: #000 !important;
+}
+
+.profile-card .profile-chip .mini,
+.profile-card .metric-meta .lbl,
+.profile-card .kv span:first-child{
+  color: #1f2937 !important;
+}
+
+.profile-card .metric-tile,
+.profile-card .kv,
+#profile-sub-card{
+  background: #ffffff !important;
+}

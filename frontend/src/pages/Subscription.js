@@ -6,7 +6,7 @@ import { apiFetch } from "../api/client.js";
 export async function SubscriptionPage() {
   const isOnline = Boolean(authStore.token);
 
-  // Query y hash para compatibilidad (Stripe puede volver en cualquiera de los dos formatos)
+  // Query y hash para compatibilidad (Stripe puede volver en ambos formatos).
   const searchParams = new URLSearchParams(location.search || "");
   const hash = location.hash || "";
   const [, hashQuery = ""] = hash.split("?");
@@ -15,7 +15,7 @@ export async function SubscriptionPage() {
   const success = searchParams.get("success") === "true" || hashParams.get("success") === "true";
   const sessionId = searchParams.get("session_id") || hashParams.get("session_id");
 
-  // Confirmacion silenciosa del checkout al volver de Stripe
+  // Confirmación silenciosa del checkout al volver de Stripe.
   if (success && isOnline) {
     try {
       await apiFetch("/auth/subscription/confirm", {
@@ -23,11 +23,11 @@ export async function SubscriptionPage() {
         body: sessionId ? { sessionId } : {},
       });
     } catch {
-      // No mostramos barra de estado por requerimiento de UI.
+      // UI: no mostrar barras de estado.
     }
   }
 
-  // Obtener suscripcion actual para deshabilitar el plan activo
+  // Obtener suscripción actual para deshabilitar el plan activo.
   let currentSubscription = null;
   if (isOnline) {
     try {
@@ -41,30 +41,36 @@ export async function SubscriptionPage() {
   const isActive = currentSubscription?.status === "active";
   const currentPlan = currentSubscription?.plan || null;
 
-  // Si viene de alta de usuario + pago correcto, continuar onboarding
-  const consumeOnboardingRequired = () => {
+  const hasOnboardingRequired = () => {
     const userId = authStore.me?.id;
-    if (userId) {
-      const scopedKey = `onboarding_required_${userId}`;
-      if (localStorage.getItem(scopedKey) === "1") {
-        localStorage.removeItem(scopedKey);
-        localStorage.removeItem("onboarding_required");
-        return true;
-      }
-    }
-
-    if (localStorage.getItem("onboarding_required") === "1") {
-      localStorage.removeItem("onboarding_required");
-      return true;
-    }
-
-    return false;
+    if (userId && localStorage.getItem(`onboarding_required_${userId}`) === "1") return true;
+    return localStorage.getItem("onboarding_required") === "1";
   };
 
-  const shouldGoToOnboarding = success && isOnline && consumeOnboardingRequired();
+  const consumeOnboardingRequired = () => {
+    const userId = authStore.me?.id;
+    if (userId) localStorage.removeItem(`onboarding_required_${userId}`);
+    localStorage.removeItem("onboarding_required");
+  };
+
+  const hasCompletedOnboarding = () => {
+    const userId = authStore.me?.id;
+    if (!userId) return false;
+    return localStorage.getItem(`onboarding_done_${userId}`) === "1";
+  };
+
+  // Avanzar al onboarding después de pagar aunque falte el query param.
+  const onboardingPending = hasOnboardingRequired() || (success && !hasCompletedOnboarding());
+  const shouldGoToOnboarding = isOnline && onboardingPending && (success || isActive);
   if (shouldGoToOnboarding) {
+    consumeOnboardingRequired();
     navigate("/onboarding");
     return "";
+  }
+
+  // Limpieza de marcas antiguas.
+  if (hasCompletedOnboarding() && hasOnboardingRequired()) {
+    consumeOnboardingRequired();
   }
 
   setTimeout(() => {
@@ -101,7 +107,7 @@ export async function SubscriptionPage() {
 
         <div style="text-align: center;">
           <div class="kicker">Planes</div>
-          <h1 style="font-size: 36px; font-weight: 1000; margin: 8px 0;">Elige tu suscripcion</h1>
+          <h1 style="font-size: 36px; font-weight: 1000; margin: 8px 0;">Elige tu suscripción</h1>
           <p class="sub">Sin permanencia. Cancela cuando quieras.</p>
         </div>
 
@@ -109,7 +115,7 @@ export async function SubscriptionPage() {
 
           <div class="card" style="display: flex; flex-direction: column; gap: 16px; padding: 32px;">
             <div>
-              <div class="kicker">Basico</div>
+              <div class="kicker">Básico</div>
               <div style="font-size: 40px; font-weight: 1000;">19,99 &euro;<span style="font-size: 16px; font-weight: 400;">/mes</span></div>
             </div>
             <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px;">
@@ -117,7 +123,7 @@ export async function SubscriptionPage() {
               <li>&#x2705; Reservas online</li>
               <li>&#x2705; Plan de entrenamiento IA</li>
               <li>&#x2705; Clases premium</li>
-              <li>&#x274C; Nutricion personalizada</li>
+              <li>&#x274C; Nutrición personalizada</li>
             </ul>
             <button
               class="btn btn-ghost js-subscribe"
@@ -138,7 +144,7 @@ export async function SubscriptionPage() {
               <li>&#x2705; Reservas online</li>
               <li>&#x2705; Plan de entrenamiento IA</li>
               <li>&#x2705; Clases premium</li>
-              <li>&#x2705; Nutricion personalizada</li>
+              <li>&#x2705; Nutrición personalizada</li>
             </ul>
             <button
               class="btn btn-primary js-subscribe"
@@ -154,4 +160,3 @@ export async function SubscriptionPage() {
     </div>
   `;
 }
-

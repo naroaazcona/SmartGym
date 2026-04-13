@@ -157,9 +157,9 @@ export async function LoginPage() {
         const userId = authStore.me?.id;
         if (userId) {
           localStorage.setItem(`onboarding_required_${userId}`, "1");
-        } else {
-          localStorage.setItem("onboarding_required", "1");
         }
+        // Fallback global: evita perder el flujo si la sesión tarda en hidratarse tras volver de Stripe.
+        localStorage.setItem("onboarding_required", "1");
         // Nuevo usuario -> primero pago de suscripcion con Stripe
         navigate("/suscripcion");
       } catch (ex) {
