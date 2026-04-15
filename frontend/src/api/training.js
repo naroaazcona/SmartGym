@@ -22,4 +22,6 @@ export const trainingApi = {
     apiFetch(`/training/logs/me?page=${page}&limit=${limit}`),
   createLog: (payload = {}) =>
     apiFetch("/training/logs", { method: "POST", body: payload }),
+  getCoachMembersOverview: (params = {}) =>
+    apiFetch(`/training/coach/members-overview${buildQuery(params)}`),
 };

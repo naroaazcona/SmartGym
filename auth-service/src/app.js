@@ -30,6 +30,7 @@ app.post('/staff', authenticateToken, authorizeRoles('admin'), AuthController.cr
 app.get('/users', authenticateToken, authorizeRoles('admin'), AuthController.listByRole);
 app.get('/users/all', authenticateToken, authorizeRoles('admin'), AuthController.listAllUsers);
 app.get('/users/basic', authenticateToken, authorizeRoles('admin', 'trainer'), AuthController.listBasicUsers);
+app.get('/users/registered-basic', authenticateToken, authorizeRoles('admin', 'trainer'), AuthController.listRegisteredBasic);
 app.put('/users/:id', authenticateToken, authorizeRoles('admin'), AuthController.adminUpdateUser);
 app.delete('/users/:id', authenticateToken, authorizeRoles('admin'), AuthController.adminDeleteUser);
 

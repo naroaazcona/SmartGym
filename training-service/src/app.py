@@ -8,6 +8,7 @@ import openai
 import json
 import requests as http_requests
 from bson import ObjectId
+import unicodedata
 
 def utcnow():
     return datetime.now(timezone.utc)
@@ -111,6 +112,64 @@ def create_app():
             doc["_id"] = str(doc["_id"])
         return doc
 
+    def to_user_key(value):
+        if value is None:
+            return ""
+        return str(value).strip()
+
+    def parse_datetime(value):
+        if not value:
+            return None
+        if isinstance(value, datetime):
+            dt = value
+        elif isinstance(value, str):
+            text = value.strip()
+            if not text:
+                return None
+            if text.endswith("Z"):
+                text = text[:-1] + "+00:00"
+            try:
+                dt = datetime.fromisoformat(text)
+            except ValueError:
+                return None
+        else:
+            return None
+
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+
+    def to_iso_datetime(value):
+        dt = parse_datetime(value)
+        return dt.isoformat() if dt else None
+
+    def build_user_match_filter(user_keys):
+        keys = [to_user_key(item) for item in (user_keys or []) if to_user_key(item)]
+        string_ids = []
+        numeric_ids = []
+
+        for key in keys:
+            if key not in string_ids:
+                string_ids.append(key)
+            try:
+                as_number = int(key)
+                if as_number not in numeric_ids:
+                    numeric_ids.append(as_number)
+            except ValueError:
+                continue
+
+        clauses = []
+        if string_ids:
+            clauses.append({"userId": {"$in": string_ids}})
+        if numeric_ids:
+            clauses.append({"userId": {"$in": numeric_ids}})
+
+        if not clauses:
+            return {"userId": {"$in": []}}
+        if len(clauses) == 1:
+            return clauses[0]
+        return {"$or": clauses}
+
     def first_non_empty(*values, default=None):
         for value in values:
             if value is None:
@@ -122,53 +181,237 @@ def create_app():
             return value
         return default
 
+    def parse_list_values(value):
+        if value is None:
+            return []
+
+        if isinstance(value, list):
+            raw_items = value
+        elif isinstance(value, str):
+            raw_items = value.split(",")
+        else:
+            raw_items = [value]
+
+        parsed = []
+        seen = set()
+        for item in raw_items:
+            text = str(item).strip()
+            if not text:
+                continue
+            key = text.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            parsed.append(text)
+        return parsed
+
+    def normalize_token(value):
+        text = str(value or "").strip().lower()
+        if not text:
+            return ""
+        text = unicodedata.normalize("NFD", text)
+        text = "".join(ch for ch in text if unicodedata.category(ch) != "Mn")
+        return text.replace("-", "_").replace(" ", "_")
+
+    def split_csv_tokens(value):
+        if value is None:
+            return []
+        if isinstance(value, list):
+            parts = value
+        else:
+            parts = str(value).split(",")
+
+        tokens = []
+        seen = set()
+        for item in parts:
+            token = normalize_token(item)
+            if not token or token in seen:
+                continue
+            seen.add(token)
+            tokens.append(token)
+        return tokens
+
+    def unique_in_order(values, limit=None):
+        result = []
+        seen = set()
+        for value in values:
+            text = str(value or "").strip()
+            if not text:
+                continue
+            key = normalize_token(text)
+            if key in seen:
+                continue
+            seen.add(key)
+            result.append(text)
+            if limit and len(result) >= limit:
+                break
+        return result
+
+    def build_safe_wrist_exercises():
+        return [
+            "Bicicleta estatica 20 min",
+            "Sentadillas 3x12",
+            "Prensa de piernas 3x12",
+            "Peso muerto rumano 3x10",
+            "Puente de gluteo 3x15",
+            "Zancadas 3x10 por pierna",
+            "Curl femoral en maquina 3x12",
+            "Caminata inclinada 15 min",
+            "Abdominales en maquina 3x15",
+            "Movilidad de cadera y tobillo 10 min",
+        ]
+
+    def adapt_plan_to_preferences(plan: dict, profile: dict = None, preferences: dict = None) -> dict:
+        if not isinstance(plan, dict):
+            return plan
+
+        profile = profile or {}
+        preferences = preferences or {}
+        adapted = dict(plan)
+
+        preferred_training = split_csv_tokens(preferences.get("preferred_training", []))
+        injuries = split_csv_tokens(first_non_empty(preferences.get("injuries"), profile.get("injuries"), default="ninguna"))
+
+        pref_class_map = {
+            "fuerza": ["Fuerza", "Body Pump"],
+            "cardio": ["Spinning", "Cardio"],
+            "hiit": ["HIIT", "Cross Training"],
+            "yoga_pilates": ["Yoga", "Pilates"],
+            "funcional": ["Funcional"],
+            "crossfit": ["Cross Training", "HIIT"],
+        }
+
+        preferred_class_types = []
+        for pref in preferred_training:
+            preferred_class_types.extend(pref_class_map.get(pref, []))
+
+        raw_classes = adapted.get("recommended_class_types", [])
+        if not isinstance(raw_classes, list):
+            raw_classes = []
+        adapted["recommended_class_types"] = unique_in_order(preferred_class_types + raw_classes, limit=4)
+
+        split = adapted.get("split", [])
+        if not isinstance(split, list):
+            split = []
+        split = [dict(item) for item in split if isinstance(item, dict)]
+
+        notes_parts = [str(adapted.get("notes") or "").strip()]
+
+        prefers_yoga = "yoga_pilates" in preferred_training
+        if prefers_yoga:
+            yoga_focus_tokens = ("yoga", "pilates", "movilidad", "flexibilidad", "estiramiento")
+            has_yoga_block = False
+            for item in split:
+                focus_text = normalize_token(item.get("focus", ""))
+                if any(token in focus_text for token in yoga_focus_tokens):
+                    has_yoga_block = True
+                    break
+            if not has_yoga_block:
+                yoga_session = {
+                    "day": "Dia de movilidad",
+                    "focus": "Yoga/Pilates y movilidad",
+                    "duration_min": 40,
+                    "exercises": [
+                        "Movilidad de columna 10 min",
+                        "Secuencia de Yoga suave 20 min",
+                        "Respiracion diafragmatica 5 min",
+                    ],
+                }
+                if split:
+                    split[-1] = yoga_session
+                else:
+                    split.append(yoga_session)
+            notes_parts.append("Se prioriza bloque de yoga/pilates segun preferencia.")
+
+        has_wrist_injury = any(token in ("muneca", "codo", "muneca_codo") for token in injuries)
+        if has_wrist_injury:
+            banned_tokens = (
+                "press",
+                "flexion",
+                "fondo",
+                "burpee",
+                "plancha",
+                "dominada",
+                "curl",
+                "push",
+            )
+            safe_pool = build_safe_wrist_exercises()
+            safe_index = 0
+
+            for item in split:
+                exercises = item.get("exercises", [])
+                if not isinstance(exercises, list):
+                    exercises = parse_list_values(exercises)
+
+                filtered = []
+                for ex in exercises:
+                    ex_text = str(ex or "").strip()
+                    if not ex_text:
+                        continue
+                    normalized_ex = normalize_token(ex_text)
+                    if any(token in normalized_ex for token in banned_tokens):
+                        continue
+                    filtered.append(ex_text)
+
+                while len(filtered) < 3 and safe_index < len(safe_pool):
+                    filtered.append(safe_pool[safe_index])
+                    safe_index += 1
+
+                item["exercises"] = unique_in_order(filtered[:4])
+
+            notes_parts.append("Plan adaptado para lesion de muneca evitando carga directa en manos.")
+
+        adapted["split"] = split
+        adapted["notes"] = " ".join(part for part in notes_parts if part).strip()
+        return adapted
+
     def build_effective_profile(stored_profile: dict = None, preferences: dict = None) -> dict:
         stored_profile = stored_profile or {}
         preferences = preferences or {}
 
         level = str(first_non_empty(
+            request.args.get("level"),
             stored_profile.get("experience_level"),
             preferences.get("experience_level"),
-            request.args.get("level"),
             default="beginner",
         )).strip().lower() or "beginner"
 
         goal = str(first_non_empty(
+            request.args.get("goal"),
             stored_profile.get("goal"),
             preferences.get("goal"),
-            request.args.get("goal"),
             default="mejorar condicion fisica",
         )).replace("_", " ").strip() or "mejorar condicion fisica"
 
         days_per_week = safe_int(first_non_empty(
+            request.args.get("days"),
             stored_profile.get("days_per_week"),
             preferences.get("days_per_week"),
-            request.args.get("days"),
             default=3,
         ), 3)
         days_per_week = max(1, min(days_per_week, 7))
 
         injuries = str(first_non_empty(
+            request.args.get("injuries"),
             stored_profile.get("injuries"),
             preferences.get("injuries"),
-            request.args.get("injuries"),
             default="ninguna",
         )).replace("_", " ").strip() or "ninguna"
 
         gender = str(first_non_empty(
-            stored_profile.get("gender"),
             request.args.get("gender"),
+            stored_profile.get("gender"),
             default="",
         )).strip()
 
         weight_kg = first_non_empty(
-            stored_profile.get("weight_kg"),
             request.args.get("weight"),
+            stored_profile.get("weight_kg"),
             default=None,
         )
         height_cm = first_non_empty(
-            stored_profile.get("height_cm"),
             request.args.get("height"),
+            stored_profile.get("height_cm"),
             default=None,
         )
 
@@ -181,6 +424,31 @@ def create_app():
             "weight_kg": weight_kg,
             "height_cm": height_cm,
         }
+
+    def build_effective_preferences(stored_preferences: dict = None) -> dict:
+        stored_preferences = stored_preferences if isinstance(stored_preferences, dict) else {}
+        preferred_training_raw = first_non_empty(
+            request.args.get("preferred_training"),
+            stored_preferences.get("preferred_training"),
+            default=[],
+        )
+        available_equipment_raw = first_non_empty(
+            request.args.get("available_equipment"),
+            stored_preferences.get("available_equipment"),
+            default=[],
+        )
+        injuries_raw = first_non_empty(
+            request.args.get("injuries"),
+            stored_preferences.get("injuries"),
+            default="ninguna",
+        )
+
+        preferences = dict(stored_preferences)
+        preferences["preferred_training"] = parse_list_values(preferred_training_raw)
+        preferences["available_equipment"] = parse_list_values(available_equipment_raw)
+        injuries = str(injuries_raw).replace("_", " ").strip() if injuries_raw is not None else "ninguna"
+        preferences["injuries"] = injuries or "ninguna"
+        return preferences
 
     def normalize_recommendation_payload(recommendation: dict = None, allow_diet_tips: bool = True) -> dict:
         recommendation = recommendation if isinstance(recommendation, dict) else {}
@@ -206,7 +474,30 @@ def create_app():
 
         return normalized
 
-    def generate_plan_ai(profile: dict, preferences: dict = None) -> dict:
+    def build_recent_logs_context(logs: list = None) -> str:
+        logs = logs or []
+        if not logs:
+            return "Sin sesiones recientes registradas."
+
+        lines = []
+        for index, log in enumerate(logs[:5], start=1):
+            title = str(log.get("title") or "Sesion").strip()
+            duration_min = safe_int(log.get("duration_min"), 0)
+            note = str(log.get("notes") or "").strip()
+            date_text = str(first_non_empty(log.get("date"), log.get("createdAt"), default="")).strip()
+
+            parts = [f"{index}. {title}"]
+            if duration_min > 0:
+                parts.append(f"{duration_min} min")
+            if date_text:
+                parts.append(f"fecha {date_text}")
+            if note:
+                parts.append(f"notas: {note[:120]}")
+            lines.append(" | ".join(parts))
+
+        return "\n".join(lines)
+
+    def generate_plan_ai(profile: dict, preferences: dict = None, recent_logs: list = None) -> dict:
         """Genera una recomendaciÃ³n completa y estructurada usando OpenAI."""
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
@@ -226,6 +517,7 @@ def create_app():
 
         preferred_training_text = ", ".join(preferred_training) if preferred_training else "sin preferencia"
         available_equipment_text = ", ".join(available_equipment) if available_equipment else "gimnasio completo"
+        recent_logs_text = build_recent_logs_context(recent_logs)
 
         prompt = f"""
 Eres un entrenador personal experto de SmartGym.
@@ -247,10 +539,14 @@ PREFERENCIAS:
 - Tipos favoritos: {preferred_training_text}
 - Equipamiento disponible: {available_equipment_text}
 
+HISTORIAL RECIENTE:
+{recent_logs_text}
+
 REGLAS IMPORTANTES:
 - Adapta el plan al nivel del usuario.
 - Si es principiante, evita planteamientos demasiado avanzados.
 - Si tiene lesiones o limitaciones, evita ejercicios problemÃ¡ticos.
+- Ten en cuenta el historial reciente para ajustar volumen y variedad.
 - El plan debe ser realista.
 - Usa ejercicios especÃ­ficos.
 - Incluye series y repeticiones dentro del texto del ejercicio.
@@ -521,9 +817,11 @@ FORMATO JSON OBLIGATORIO:
         allow_diet_tips = subscription.get("plan") == "premium"
 
         prefs_doc = prefs_col.find_one({"userId": user["id"]}, sort=[("createdAt", -1)])
-        preferences = prefs_doc.get("preferences") if prefs_doc else {}
+        stored_preferences = prefs_doc.get("preferences") if prefs_doc else {}
+        preferences = build_effective_preferences(stored_preferences)
         stored_profile = profiles_col.find_one({"userId": user["id"]})
         profile = build_effective_profile(stored_profile, preferences)
+        recent_logs = list(logs_col.find({"userId": user["id"]}).sort("createdAt", -1).limit(6))
 
         if not stored_profile:
             profiles_col.update_one(
@@ -548,7 +846,7 @@ FORMATO JSON OBLIGATORIO:
             )
 
         try:
-            plan = generate_plan_ai(profile, preferences)
+            plan = generate_plan_ai(profile, preferences, recent_logs=recent_logs)
             source = "openai"
         except Exception as e:
             print(f"[AI ERROR] OpenAI fallo, usando fallback: {e}")
@@ -568,6 +866,7 @@ FORMATO JSON OBLIGATORIO:
                 "notes": "Intentalo de nuevo mas tarde."
             }
 
+        plan = adapt_plan_to_preferences(plan, profile=profile, preferences=preferences)
         plan = normalize_recommendation_payload(plan, allow_diet_tips=allow_diet_tips)
 
         doc = {
@@ -682,6 +981,120 @@ FORMATO JSON OBLIGATORIO:
             "message": "Plan guardado en recommendations",
             "recommendation": serialized,
         }), 201
+
+    @app.route("/coach/members-overview", methods=["GET"])
+    def coach_members_overview():
+        user, err = require_auth()
+        if err:
+            return err
+
+        if user.get("role") not in ("trainer", "admin"):
+            return jsonify({"error": "No tienes permisos para esta funcionalidad"}), 403
+
+        token = request.headers.get("Authorization", "")
+        logs_limit = safe_int(request.args.get("logs_limit"), 6)
+        logs_limit = max(1, min(logs_limit, 20))
+
+        try:
+            resp = http_requests.get(
+                f"{auth_url}/users/registered-basic",
+                headers={"Authorization": token},
+                timeout=8,
+            )
+            if resp.status_code != 200:
+                return jsonify({"error": "No se pudo cargar el listado de usuarios"}), 503
+            users = resp.json().get("users")
+            if not isinstance(users, list):
+                users = []
+        except http_requests.exceptions.RequestException:
+            return jsonify({"error": "No se pudo cargar el listado de usuarios"}), 503
+
+        user_keys = [to_user_key(item.get("id")) for item in users if to_user_key(item.get("id"))]
+        if not user_keys:
+            return jsonify({"members": [], "generatedAt": utcnow().isoformat()})
+
+        user_filter = build_user_match_filter(user_keys)
+
+        prefs_docs = list(prefs_col.find(user_filter).sort("createdAt", -1))
+        latest_prefs_by_user = {}
+        for doc in prefs_docs:
+            key = to_user_key(doc.get("userId"))
+            if key and key not in latest_prefs_by_user:
+                latest_prefs_by_user[key] = doc
+
+        logs_docs = list(logs_col.find(user_filter).sort("createdAt", -1))
+        logs_by_user = {}
+        log_counts = {}
+        latest_log_timestamp = {}
+        for doc in logs_docs:
+            key = to_user_key(doc.get("userId"))
+            if not key:
+                continue
+            log_counts[key] = log_counts.get(key, 0) + 1
+            if key not in latest_log_timestamp:
+                latest_log_timestamp[key] = doc.get("createdAt") or doc.get("date")
+
+            bucket = logs_by_user.setdefault(key, [])
+            if len(bucket) < logs_limit:
+                bucket.append(doc)
+
+        members = []
+        for item in users:
+            key = to_user_key(item.get("id"))
+            pref_doc = latest_prefs_by_user.get(key)
+            preferences = pref_doc.get("preferences") if isinstance(pref_doc, dict) and isinstance(pref_doc.get("preferences"), dict) else {}
+            preferences_updated_at = to_iso_datetime(pref_doc.get("createdAt")) if isinstance(pref_doc, dict) else None
+
+            preview_logs = []
+            for raw_log in logs_by_user.get(key, []):
+                log = serialize(raw_log) or {}
+                preview_logs.append({
+                    "_id": log.get("_id"),
+                    "title": log.get("title"),
+                    "date": log.get("date"),
+                    "duration_min": log.get("duration_min"),
+                    "notes": log.get("notes"),
+                    "createdAt": log.get("createdAt"),
+                })
+
+            date_candidates = [
+                parse_datetime(preferences_updated_at),
+                parse_datetime(latest_log_timestamp.get(key)),
+            ]
+            date_candidates = [dt for dt in date_candidates if dt]
+            last_activity_at = max(date_candidates).isoformat() if date_candidates else None
+
+            members.append({
+                "user": {
+                    "id": item.get("id"),
+                    "email": item.get("email"),
+                    "name": item.get("name"),
+                    "role": item.get("role"),
+                    "first_name": item.get("first_name"),
+                    "last_name": item.get("last_name"),
+                    "created_at": to_iso_datetime(item.get("created_at")),
+                },
+                "preferences": preferences,
+                "preferences_updated_at": preferences_updated_at,
+                "logs": preview_logs,
+                "logs_total": log_counts.get(key, 0),
+                "last_activity_at": last_activity_at,
+            })
+
+        def member_sort_key(member):
+            last_activity = parse_datetime(member.get("last_activity_at"))
+            created_at = parse_datetime(member.get("user", {}).get("created_at"))
+            return (
+                last_activity or created_at or datetime.fromtimestamp(0, tz=timezone.utc),
+                to_user_key(member.get("user", {}).get("id")),
+            )
+
+        members.sort(key=member_sort_key, reverse=True)
+
+        return jsonify({
+            "members": members,
+            "generatedAt": utcnow().isoformat(),
+        }), 200
 
     @app.route("/logs", methods=["POST"])
     def create_log():

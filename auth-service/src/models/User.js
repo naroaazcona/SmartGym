@@ -222,6 +222,25 @@ static async findAll() {
     return result.rows;
 }
 
+static async findRegisteredBasic() {
+    const query = `
+        SELECT
+            u.id,
+            u.email,
+            u.name,
+            u.role,
+            u.created_at,
+            p.first_name,
+            p.last_name
+        FROM users u
+        LEFT JOIN user_profiles p ON p.user_id = u.id
+        ORDER BY u.created_at DESC, u.id DESC
+    `;
+
+    const result = await pool.query(query);
+    return result.rows;
+}
+
 static async updateByAdmin(userId, data = {}) {
     const id = Number(userId);
     if (!Number.isInteger(id) || id <= 0) return null;

@@ -536,6 +536,17 @@ class AuthController {
         }
     }
 
+    // Listado basico de usuarios registrados (admin y trainer)
+    static async listRegisteredBasic(req, res) {
+        try {
+            const users = await User.findRegisteredBasic();
+            return res.json({ users });
+        } catch (error) {
+            console.error('Error listando usuarios basicos:', error);
+            return res.status(500).json({ error: 'Error interno del servidor' });
+        }
+    }
+
     // Actualizar cualquier usuario (solo admin)
     static async adminUpdateUser(req, res) {
         try {

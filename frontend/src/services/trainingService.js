@@ -22,6 +22,19 @@ export const trainingService = {
     };
   },
 
+  async getMyPreferences() {
+    const res = await trainingApi.getPreferences();
+    return res?.preferences || null;
+  },
+
+  async saveMyPreferences(preferences = {}) {
+    const res = await trainingApi.savePreferences(preferences);
+    return {
+      message: res?.message || "",
+      preferences: res?.preferences || null,
+    };
+  },
+
   async getMyLogs(page = 1, limit = 20) {
     const res = await trainingApi.getMyLogs(page, limit);
     return {
@@ -35,6 +48,16 @@ export const trainingService = {
     return {
       message: res?.message || "",
       log:     res?.log || null,
+    };
+  },
+
+  async getCoachMembersOverview(logsLimit = 6) {
+    const limitNum = Number(logsLimit);
+    const safeLimit = Number.isFinite(limitNum) && limitNum > 0 ? Math.round(limitNum) : 6;
+    const res = await trainingApi.getCoachMembersOverview({ logs_limit: safeLimit });
+    return {
+      members: Array.isArray(res?.members) ? res.members : [],
+      generatedAt: res?.generatedAt || null,
     };
   },
 };
