@@ -525,6 +525,104 @@ class AuthController {
         }
     }
 
+    // Listar todos los usuarios con su perfil (solo admin)
+    static async listAllUsers(req, res) {
+        try {
+            const users = await User.findAll();
+            return res.json({ users });
+        } catch (error) {
+            console.error('Error listando usuarios:', error);
+            return res.status(500).json({ error: 'Error interno del servidor' });
+        }
+    }
+
+    // Actualizar cualquier usuario (solo admin)
+    static async adminUpdateUser(req, res) {
+        try {
+            const userId = Number(req.params.id);
+            if (!Number.isInteger(userId) || userId <= 0) {
+                return res.status(400).json({ error: 'Id de usuario invalido' });
+            }
+
+            const payload = { ...(req.body || {}) };
+
+            if (payload.email !== undefined && !isValidEmail(payload.email)) {
+                return res.status(400).json({ error: 'Email invalido' });
+            }
+            if (payload.phone !== undefined) {
+                payload.phone = normalizeEsPhone(payload.phone);
+            }
+
+            if (req.userId === userId && payload.role && String(payload.role).toLowerCase() !== 'admin') {
+                return res.status(400).json({ error: 'No puedes cambiar tu propio rol de admin' });
+            }
+
+            const updated = await User.updateByAdmin(userId, payload);
+            if (!updated) {
+                return res.status(404).json({ error: 'Usuario no encontrado' });
+            }
+
+            return res.json({
+                message: 'Usuario actualizado correctamente',
+                user: {
+                    id: updated.id,
+                    email: updated.email,
+                    name: updated.name,
+                    role: updated.role,
+                    created_at: updated.created_at,
+                    profile: updated.first_name ? {
+                        firstName: updated.first_name,
+                        lastName: updated.last_name,
+                        phone: updated.phone,
+                        birthDate: updated.birth_date,
+                        gender: updated.gender,
+                        heightCm: updated.height_cm,
+                        weightKg: updated.weight_kg,
+                        experienceLevel: updated.experience_level,
+                    } : null
+                }
+            });
+        } catch (error) {
+            console.error('Error actualizando usuario por admin:', error);
+
+            if (error?.message === 'invalid_role') {
+                return res.status(400).json({ error: 'Rol invalido. Usa admin, trainer o member' });
+            }
+            if (error?.message === 'invalid_email') {
+                return res.status(400).json({ error: 'Email invalido' });
+            }
+            if (error?.code === '23505') {
+                return res.status(409).json({ error: 'Email ya en uso' });
+            }
+
+            return res.status(500).json({ error: 'Error interno del servidor' });
+        }
+    }
+
+    // Eliminar usuario (solo admin)
+    static async adminDeleteUser(req, res) {
+        try {
+            const userId = Number(req.params.id);
+            if (!Number.isInteger(userId) || userId <= 0) {
+                return res.status(400).json({ error: 'Id de usuario invalido' });
+            }
+
+            if (req.userId === userId) {
+                return res.status(400).json({ error: 'No puedes eliminar tu propio usuario' });
+            }
+
+            const removed = await User.deleteById(userId);
+            if (!removed) {
+                return res.status(404).json({ error: 'Usuario no encontrado' });
+            }
+
+            return res.status(204).send();
+        } catch (error) {
+            console.error('Error eliminando usuario por admin:', error);
+            return res.status(500).json({ error: 'Error interno del servidor' });
+        }
+    }
+
     // Listar datos basicos de usuarios por ids (admin y trainer)
     static async listBasicUsers(req, res) {
         try {

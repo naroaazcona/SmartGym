@@ -176,6 +176,189 @@ static async findByRole(role) {
     return result.rows;
 }
 
+static async findAll() {
+    const query = `
+        SELECT
+            u.id,
+            u.email,
+            u.name,
+            u.role,
+            u.created_at,
+            u.updated_at,
+            p.first_name,
+            p.last_name,
+            p.phone,
+            p.birth_date,
+            p.gender,
+            p.height_cm,
+            p.weight_kg,
+            p.experience_level,
+            s.plan AS subscription_plan,
+            s.status AS subscription_status,
+            s.current_period_end AS subscription_current_period_end
+        FROM users u
+        LEFT JOIN user_profiles p ON p.user_id = u.id
+        LEFT JOIN LATERAL (
+            SELECT
+                sub.plan,
+                sub.status,
+                sub.current_period_end,
+                sub.created_at
+            FROM subscriptions sub
+            WHERE sub.user_id = u.id
+            ORDER BY sub.created_at DESC
+            LIMIT 1
+        ) s ON TRUE
+        ORDER BY
+            CASE u.role
+                WHEN 'admin' THEN 1
+                WHEN 'trainer' THEN 2
+                ELSE 3
+            END,
+            u.name ASC,
+            u.id ASC
+    `;
+    const result = await pool.query(query);
+    return result.rows;
+}
+
+static async updateByAdmin(userId, data = {}) {
+    const id = Number(userId);
+    if (!Number.isInteger(id) || id <= 0) return null;
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        const currentResult = await client.query(
+            `SELECT
+                u.id,
+                u.email,
+                u.name,
+                u.role,
+                p.first_name,
+                p.last_name,
+                p.phone,
+                p.birth_date,
+                p.gender,
+                p.height_cm,
+                p.weight_kg,
+                p.experience_level
+             FROM users u
+             LEFT JOIN user_profiles p ON p.user_id = u.id
+             WHERE u.id = $1
+             LIMIT 1`,
+            [id]
+        );
+
+        const current = currentResult.rows[0];
+        if (!current) {
+            await client.query('ROLLBACK');
+            return null;
+        }
+
+        const rawRole = data.role === undefined ? current.role : String(data.role || '').trim().toLowerCase();
+        const allowedRoles = new Set(['admin', 'trainer', 'member']);
+        if (!allowedRoles.has(rawRole)) {
+            await client.query('ROLLBACK');
+            throw new Error('invalid_role');
+        }
+
+        const nextEmail = data.email === undefined ? current.email : String(data.email || '').trim().toLowerCase();
+        if (!nextEmail) {
+            await client.query('ROLLBACK');
+            throw new Error('invalid_email');
+        }
+
+        const nextFirstName =
+            data.firstName === undefined ? String(current.first_name || '').trim() : String(data.firstName || '').trim();
+        const nextLastName =
+            data.lastName === undefined ? String(current.last_name || '').trim() : String(data.lastName || '').trim();
+
+        const fallbackName = String(current.name || '').trim();
+        const fallbackParts = fallbackName ? fallbackName.split(/\s+/) : [];
+        const ensuredFirstName = nextFirstName || fallbackParts[0] || 'Usuario';
+        const ensuredLastName = nextLastName || fallbackParts.slice(1).join(' ') || '-';
+
+        const requestedName = data.name === undefined ? null : String(data.name || '').trim();
+        const computedName = requestedName || `${ensuredFirstName} ${ensuredLastName}`.trim();
+
+        await client.query(
+            `UPDATE users
+             SET email = $1,
+                 name = $2,
+                 role = $3,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = $4`,
+            [nextEmail, computedName, rawRole, id]
+        );
+
+        const nextPhone =
+            data.phone === undefined ? (current.phone || null) : (String(data.phone || '').trim() || null);
+        const nextBirthDate =
+            data.birthDate === undefined ? (current.birth_date || null) : (data.birthDate || null);
+        const nextGender =
+            data.gender === undefined ? (current.gender || null) : (String(data.gender || '').trim() || null);
+        const nextHeightCm =
+            data.heightCm === undefined ? (current.height_cm ?? null) : (data.heightCm ?? null);
+        const nextWeightKg =
+            data.weightKg === undefined ? (current.weight_kg ?? null) : (data.weightKg ?? null);
+        const nextExperienceLevel =
+            data.experienceLevel === undefined
+                ? (current.experience_level || 'beginner')
+                : (String(data.experienceLevel || '').trim() || 'beginner');
+
+        await client.query(
+            `INSERT INTO user_profiles (
+                user_id, first_name, last_name, phone, birth_date, gender,
+                height_cm, weight_kg, experience_level, updated_at
+            )
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,CURRENT_TIMESTAMP)
+            ON CONFLICT (user_id) DO UPDATE
+            SET first_name = EXCLUDED.first_name,
+                last_name = EXCLUDED.last_name,
+                phone = EXCLUDED.phone,
+                birth_date = EXCLUDED.birth_date,
+                gender = EXCLUDED.gender,
+                height_cm = EXCLUDED.height_cm,
+                weight_kg = EXCLUDED.weight_kg,
+                experience_level = EXCLUDED.experience_level,
+                updated_at = CURRENT_TIMESTAMP`,
+            [
+                id,
+                ensuredFirstName,
+                ensuredLastName,
+                nextPhone,
+                nextBirthDate,
+                nextGender,
+                nextHeightCm,
+                nextWeightKg,
+                nextExperienceLevel,
+            ]
+        );
+
+        await client.query('COMMIT');
+        return await this.findById(id);
+    } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+    } finally {
+        client.release();
+    }
+}
+
+static async deleteById(userId) {
+    const id = Number(userId);
+    if (!Number.isInteger(id) || id <= 0) return null;
+    const result = await pool.query(
+        `DELETE FROM users
+         WHERE id = $1
+         RETURNING id, email, name, role`,
+        [id]
+    );
+    return result.rows[0] || null;
+}
+
 static async findBasicByIds(ids = []) {
     const normalizedIds = [...new Set(
         (Array.isArray(ids) ? ids : [])

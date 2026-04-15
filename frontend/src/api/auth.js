@@ -41,6 +41,18 @@ export const authApi = {
   listByRole: (role) =>
     apiFetch(`/auth/users?role=${role}`),
 
+  listUsers: () =>
+    apiFetch("/auth/users/all"),
+
+  listBasicUsers: (ids = []) =>
+    apiFetch(`/auth/users/basic?ids=${encodeURIComponent((ids || []).join(","))}`),
+
+  updateUser: (id, payload) =>
+    apiFetch(`/auth/users/${id}`, { method: "PUT", body: payload }),
+
+  deleteUser: (id) =>
+    apiFetch(`/auth/users/${id}`, { method: "DELETE" }),
+
   cancelSubscription: () =>
     apiFetch("/auth/subscription/cancel", { method: "POST" }),
 

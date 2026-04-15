@@ -86,6 +86,30 @@ export const authService = {
     return res?.users || [];
   },
 
+  async listUsers() {
+    const res = await authApi.listUsers();
+    return res?.users || [];
+  },
+
+  async listBasicUsers(ids = []) {
+    const normalizedIds = [...new Set(
+      (Array.isArray(ids) ? ids : [])
+        .map((value) => Number(value))
+        .filter((value) => Number.isInteger(value) && value > 0)
+    )];
+    if (!normalizedIds.length) return [];
+    const res = await authApi.listBasicUsers(normalizedIds);
+    return res?.users || [];
+  },
+
+  async updateUser(id, payload) {
+    return authApi.updateUser(id, payload);
+  },
+
+  async deleteUser(id) {
+    return authApi.deleteUser(id);
+  },
+
   async cancelSubscription() {
     return authApi.cancelSubscription();
   },
