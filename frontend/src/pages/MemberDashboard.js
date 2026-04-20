@@ -1,7 +1,7 @@
 import { Navbar } from "../components/Navbar.js";
 import { authStore } from "../state/authStore.js";
 import { authService } from "../services/authService.js";
-import { navigate } from "../router.js";
+import { navigate, showToast } from "../router.js";
 import { gymService } from "../services/gymService.js";
 import {
   asDate,
@@ -49,7 +49,19 @@ const sortClassesByDate = (items = []) =>
     .slice()
     .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
 
-const renderMemberClassCard = (cls) => {
+const ACTIVE_RESERVATION_STATUSES = new Set(["booked", "present", "late", "absent", "no_show"]);
+
+const getActiveReservationClassIds = (reservations = []) =>
+  new Set(
+    (Array.isArray(reservations) ? reservations : [])
+      .filter((item) => ACTIVE_RESERVATION_STATUSES.has(normalizeText(item?.status)))
+      .map((item) => Number(item?.class_id ?? item?.classId))
+      .filter((id) => Number.isFinite(id) && id > 0)
+  );
+
+const renderMemberClassCard = (cls, options = {}) => {
+  const isReserved = Boolean(options?.isReserved);
+  const feedback = options?.feedback || null;
   const capacity = Number(cls.capacity || 0);
   const booked = Number(cls.booked_count || 0);
   const free = Math.max(capacity - booked, 0);
@@ -58,13 +70,17 @@ const renderMemberClassCard = (cls) => {
   const demand = getDemandMeta(occupancy);
   const progressColor =
     occupancy >= 85 ? "rgba(255,122,89,.92)" : occupancy >= 60 ? "rgba(253,188,46,.92)" : "rgba(40,205,180,.95)";
+  const feedbackColor = feedback?.type === "error" ? "#b42318" : "#087443";
 
   return `
     <article class="class-card member-class-card ${demand.className}" data-class-id="${cls.id}" data-demand="${demand.key}" style="min-height:250px;">
       <div class="backdrop" style="background-image:url('${imgForType(cls.class_type_name)}')"></div>
       <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
         <div class="tag ${full ? "red" : "green"}">${escapeHtml(cls.class_type_name || "Clase")}</div>
-        <span class="badge">${occupancy}% aforo</span>
+        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+          <span class="badge">${occupancy}% aforo</span>
+          ${isReserved ? `<span class="badge green">Reservada</span>` : ""}
+        </div>
       </div>
 
       <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
@@ -90,10 +106,14 @@ const renderMemberClassCard = (cls) => {
       </div>
 
       <div class="cta-inline" style="margin-top:auto;">
-        <button class="btn btn-primary" data-action="reserve" data-id="${cls.id}" ${full ? "disabled" : ""}>Reservar</button>
-        <button class="btn btn-ghost" data-action="cancel" data-id="${cls.id}">Cancelar</button>
+        <button class="btn btn-primary" data-action="reserve" data-id="${cls.id}" ${full || isReserved ? "disabled" : ""}>
+          ${isReserved ? "Reservada" : "Reservar"}
+        </button>
+        <button class="btn btn-ghost" data-action="cancel" data-id="${cls.id}" ${isReserved ? "" : "disabled"}>Cancelar</button>
       </div>
-      <div class="dim" id="member-msg-${cls.id}"></div>
+      <div class="dim" id="member-msg-${cls.id}" style="${feedback ? `color:${feedbackColor}; font-weight:700;` : ""}">
+        ${feedback ? escapeHtml(feedback.message) : ""}
+      </div>
     </article>
   `;
 };
@@ -111,10 +131,20 @@ export async function MemberDashboard() {
   }
 
   const name = me?.profile?.firstName || me?.firstName || me?.name || me?.email || "Socio";
-  const classes = await gymService.listClasses().catch(() => []);
+  const [classes, initialReservations] = await Promise.all([
+    gymService.listClasses().catch(() => []),
+    gymService.listMyReservations().catch(() => []),
+  ]);
   const sortedClasses = sortClassesByDate(classes);
+  const initialReservedClassIds = getActiveReservationClassIds(initialReservations);
   const initialClassCards = sortedClasses.length
-    ? sortedClasses.map((cls) => renderMemberClassCard(cls)).join("")
+    ? sortedClasses
+        .map((cls) =>
+          renderMemberClassCard(cls, {
+            isReserved: initialReservedClassIds.has(Number(cls.id)),
+          })
+        )
+        .join("")
     : renderEmptyState();
 
   setTimeout(() => {
@@ -128,6 +158,9 @@ export async function MemberDashboard() {
     const freeTodayEl = document.querySelector("#member-free-today");
 
     let currentClasses = sortedClasses.slice();
+    let currentReservations = Array.isArray(initialReservations) ? initialReservations.slice() : [];
+    let reservedClassIds = getActiveReservationClassIds(currentReservations);
+    const actionFeedbackByClassId = new Map();
     let currentFilter = "available";
     let currentSearch = "";
 
@@ -179,6 +212,13 @@ export async function MemberDashboard() {
       });
     };
 
+    const setCardFeedback = (classId, message, type = "success") => {
+      actionFeedbackByClassId.set(Number(classId), {
+        message: String(message || "").trim() || "Operacion completada.",
+        type,
+      });
+    };
+
     const animateCards = () => {
       const cards = Array.from(document.querySelectorAll("#member-classes .member-class-card"));
       if (!cards.length) return;
@@ -195,7 +235,16 @@ export async function MemberDashboard() {
     const renderClassList = () => {
       if (!listEl) return;
       const visible = applyFilters(currentClasses);
-      listEl.innerHTML = visible.length ? visible.map((cls) => renderMemberClassCard(cls)).join("") : "<p class='sub'>No hay clases con los filtros actuales.</p>";
+      listEl.innerHTML = visible.length
+        ? visible
+            .map((cls) =>
+              renderMemberClassCard(cls, {
+                isReserved: reservedClassIds.has(Number(cls.id)),
+                feedback: actionFeedbackByClassId.get(Number(cls.id)),
+              })
+            )
+            .join("")
+        : "<p class='sub'>No hay clases con los filtros actuales.</p>";
       updateTopMetrics(visible);
       paintFilterButtons();
       setStatus(`Mostrando ${visible.length} de ${currentClasses.length} clases.`);
@@ -212,8 +261,13 @@ export async function MemberDashboard() {
         listEl.innerHTML = renderClassSkeleton();
       }
       try {
-        const data = await gymService.listClasses();
+        const [data, reservations] = await Promise.all([
+          gymService.listClasses(),
+          gymService.listMyReservations().catch(() => currentReservations),
+        ]);
         currentClasses = sortClassesByDate(data);
+        currentReservations = Array.isArray(reservations) ? reservations : [];
+        reservedClassIds = getActiveReservationClassIds(currentReservations);
         renderClassList();
       } catch (err) {
         console.error(err);
@@ -243,6 +297,7 @@ export async function MemberDashboard() {
       const btn = e.target.closest("[data-action]");
       if (!btn) return;
       const id = Number(btn.dataset.id);
+      if (!Number.isFinite(id) || id <= 0) return;
       const action = btn.dataset.action;
       const msgEl = document.querySelector(`#member-msg-${id}`);
       const toggle = (isLoading, label) => {
@@ -250,20 +305,42 @@ export async function MemberDashboard() {
         if (!btn.dataset.label) btn.dataset.label = btn.textContent;
         btn.textContent = isLoading ? label : btn.dataset.label;
       };
+      const alreadyReserved = reservedClassIds.has(id);
       try {
         if (action === "reserve") {
+          if (alreadyReserved) {
+            const txt = "Ya tienes esta clase reservada.";
+            if (msgEl) msgEl.textContent = txt;
+            setCardFeedback(id, txt);
+            showToast(txt, "info");
+            await loadClasses();
+            return;
+          }
           toggle(true, "Reservando...");
           await gymService.reserveClass(id);
-          if (msgEl) msgEl.textContent = "Reserva confirmada.";
+          setCardFeedback(id, "Reserva confirmada. Te esperamos en clase.");
+          showToast("Reserva confirmada.", "success");
         }
         if (action === "cancel") {
+          if (!alreadyReserved) {
+            const txt = "No hay una reserva activa para esta clase.";
+            if (msgEl) msgEl.textContent = txt;
+            setCardFeedback(id, txt, "error");
+            showToast(txt, "error");
+            await loadClasses();
+            return;
+          }
           toggle(true, "Cancelando...");
           await gymService.cancelReservation(id);
-          if (msgEl) msgEl.textContent = "Reserva cancelada.";
+          setCardFeedback(id, "Reserva cancelada.");
+          showToast("Reserva cancelada.", "success");
         }
         await loadClasses();
       } catch (err) {
-        if (msgEl) msgEl.textContent = err.message || "Error al procesar.";
+        const errorMessage = err.message || "Error al procesar.";
+        if (msgEl) msgEl.textContent = errorMessage;
+        setCardFeedback(id, errorMessage, "error");
+        showToast(errorMessage, "error");
       } finally {
         toggle(false);
       }

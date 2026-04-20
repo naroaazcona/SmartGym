@@ -4,10 +4,10 @@ const nowIso = () => new Date().toISOString();
 
 export const gymService = {
   async listClasses(params = {}) {
-    const query = {
-      from: params.from || nowIso(),
-      to: params.to || undefined,
-    };
+    const query = { ...params };
+    if (query.from === undefined && query.to === undefined) {
+      query.from = nowIso();
+    }
     const res = await gymApi.listClasses(query);
     return res?.classes || [];
   },
@@ -52,12 +52,20 @@ export const gymService = {
     return res?.reservations || res || [];
   },
 
-  async listClassTypes() {
-    const res = await gymApi.listClassTypes();
+  async listClassTypes(params = {}) {
+    const res = await gymApi.listClassTypes(params);
     return res?.classTypes || res || [];
   },
 
   async createClassType(payload) {
     return gymApi.createClassType(payload);
+  },
+
+  async updateClassType(id, payload) {
+    return gymApi.updateClassType(id, payload);
+  },
+
+  async deleteClassType(id) {
+    return gymApi.deleteClassType(id);
   },
 };

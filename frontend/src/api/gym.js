@@ -41,8 +41,14 @@ export const gymApi = {
     apiFetch("/gym/classes/me/reservations"),
 
   // Tipos de clase
-  listClassTypes: () => apiFetch("/gym/class-types"),
+  listClassTypes: (params = {}) => apiFetch(`/gym/class-types${buildQuery(params)}`),
 
   createClassType: (payload) =>
     apiFetch("/gym/class-types", { method: "POST", body: payload }),
+
+  updateClassType: (id, payload) =>
+    apiFetch(`/gym/class-types/${id}`, { method: "PUT", body: payload }),
+
+  deleteClassType: (id) =>
+    apiFetch(`/gym/class-types/${id}`, { method: "DELETE" }),
 };

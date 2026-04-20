@@ -6,10 +6,17 @@ export function Navbar() {
   const role = authStore.role;
   const isOnline = Boolean(authStore.token);
   const isTrainer = role === "trainer";
+  const isAdmin = role === "admin";
   const trainerName = authStore.me?.profile?.firstName || authStore.me?.name || "";
-  const trainerTabLabel = trainerName ? `Entrenador ${trainerName}` : "Entrenador";
+  const trainerNameClean = String(trainerName).trim();
+  const trainerStartsWithRole = /^entrenador\b/i.test(trainerNameClean);
+  const trainerTabLabel = trainerNameClean
+    ? trainerStartsWithRole
+      ? trainerNameClean
+      : `Entrenador ${trainerNameClean}`
+    : "Entrenador";
 
-  // delegación segura
+  // delegacion segura
   setTimeout(() => {
     document.querySelector(".navbar")?.addEventListener("click", async (e) => {
       if (e.target?.id === "logout-btn") {
@@ -31,15 +38,19 @@ export function Navbar() {
           </a>
 
           <div class="navlinks">
-            ${!isTrainer ? `<a class="linkbtn" href="#/">Inicio</a>` : ``}
+            ${!isTrainer && !isAdmin ? `<a class="linkbtn" href="#/">Inicio</a>` : ``}
             ${!isOnline ? `<a class="linkbtn" href="#/login">Acceder</a>` : ``}
             ${role === "member" ? `<a class="linkbtn" href="#/member">Clases</a>` : ``}
             ${role === "member" ? `<a class="linkbtn" href="#/member-ia">Entrenamientos y Dieta</a>` : ``}
             ${role === "member" ? `<a class="linkbtn" href="#/mis-reservas">Mis reservas</a>` : ``}
             ${role === "trainer" ? `<a class="linkbtn" href="#/trainer">${trainerTabLabel}</a>` : ``}
+            ${role === "trainer" ? `<a class="linkbtn" href="#/trainer-usuarios">Usuarios</a>` : ``}
             ${role === "admin" ? `<a class="linkbtn" href="#/admin">Admin</a>` : ``}
+            ${role === "admin" ? `<a class="linkbtn" href="#/admin-usuarios">Usuarios</a>` : ``}
+            ${role === "admin" ? `<a class="linkbtn" href="#/admin-tipos">Tipos clase</a>` : ``}
+            ${role === "admin" ? `<a class="linkbtn" href="#/admin-entrenadores">Entrenadores</a>` : ``}
             ${isOnline ? `<button class="linkbtn" id="logout-btn">Salir</button>` : ``}
-            ${isOnline && !isTrainer ? `<a class="avatar-btn" href="#/perfil" title="Mi perfil" aria-label="Mi perfil">&#128100;</a>` : ``}
+            ${isOnline && !isTrainer && !isAdmin ? `<a class="avatar-btn" href="#/perfil" title="Mi perfil" aria-label="Mi perfil">&#128100;</a>` : ``}
           </div>
         </div>
       </div>

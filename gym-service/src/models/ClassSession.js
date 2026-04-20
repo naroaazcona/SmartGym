@@ -272,27 +272,51 @@ class ClassSession {
 
   // Actualizar clase
   static async update(classId, data) {
-    const {
-      name,
-      description,
-      schedule,
-      capacity,
-      class_type_id
-    } = data;
+    const allowedFields = [
+      'class_type_id',
+      'trainer_user_id',
+      'starts_at',
+      'ends_at',
+      'capacity',
+      'instructor_name',
+      'location',
+      'description'
+    ];
 
+    const values = [];
+    const sets = [];
+    let idx = 1;
+
+    for (const field of allowedFields) {
+      if (!Object.prototype.hasOwnProperty.call(data, field)) continue;
+      sets.push(`${field} = $${idx++}`);
+      if (field === 'trainer_user_id') {
+        const trainerId = data[field];
+        values.push(
+          trainerId === undefined || trainerId === null || trainerId === ''
+            ? null
+            : Number(trainerId)
+        );
+      } else {
+        values.push(data[field]);
+      }
+    }
+
+    if (!sets.length) {
+      const current = await pool.query(`SELECT * FROM classes WHERE id = $1`, [classId]);
+      return current.rows[0] || null;
+    }
+
+    values.push(classId);
     const result = await pool.query(
       `UPDATE classes
-       SET name = $1,
-           description = $2,
-           schedule = $3,
-           capacity = $4,
-           class_type_id = $5
-       WHERE id = $6
+       SET ${sets.join(', ')}, updated_at = NOW()
+       WHERE id = $${idx}
        RETURNING *`,
-      [name, description, schedule, capacity, class_type_id, classId]
+      values
     );
 
-    return result.rows[0];
+    return result.rows[0] || null;
   }
 
   // Eliminar clase

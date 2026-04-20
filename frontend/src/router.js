@@ -3,7 +3,19 @@ import { authStore } from "./state/authStore.js";
 const routes = new Map();
 
 // Rutas que requieren login
-const AUTH_REQUIRED_ROUTES = ["/onboarding", "/perfil", "/member", "/member-ia", "/mis-reservas", "/trainer", "/admin"];
+const AUTH_REQUIRED_ROUTES = [
+  "/onboarding",
+  "/perfil",
+  "/member",
+  "/member-ia",
+  "/mis-reservas",
+  "/trainer",
+  "/trainer-usuarios",
+  "/admin",
+  "/admin-usuarios",
+  "/admin-tipos",
+  "/admin-entrenadores",
+];
 
 export function registerRoute(path, handler) {
   routes.set(path, handler);
