@@ -1006,6 +1006,10 @@ FORMATO JSON OBLIGATORIO:
             users = resp.json().get("users")
             if not isinstance(users, list):
                 users = []
+            users = [
+                item for item in users
+                if isinstance(item, dict) and str(item.get("role", "")).strip().lower() == "member"
+            ]
         except http_requests.exceptions.RequestException:
             return jsonify({"error": "No se pudo cargar el listado de usuarios"}), 503
 
@@ -1152,13 +1156,36 @@ FORMATO JSON OBLIGATORIO:
         if not isinstance(preferences, dict):
             return jsonify({"error": "Formato invalido. Esperado: { preferences: {...} }"}), 400
 
-        doc = {
-            "userId": user["id"],
-            "preferences": preferences,
-            "createdAt": utcnow(),
-        }
-        res = prefs_col.insert_one(doc)
-        doc["_id"] = res.inserted_id
+        now = utcnow()
+        existing_doc = prefs_col.find_one({"userId": user["id"]}, sort=[("createdAt", -1)])
+
+        if existing_doc:
+            prefs_col.update_one(
+                {"_id": existing_doc["_id"]},
+                {
+                    "$set": {
+                        "userId": user["id"],
+                        "preferences": preferences,
+                        "updatedAt": now,
+                    },
+                },
+            )
+            doc = dict(existing_doc)
+            doc["preferences"] = preferences
+            doc["updatedAt"] = now
+            message = "Preferencias actualizadas"
+            status_code = 200
+        else:
+            doc = {
+                "userId": user["id"],
+                "preferences": preferences,
+                "createdAt": now,
+                "updatedAt": now,
+            }
+            res = prefs_col.insert_one(doc)
+            doc["_id"] = res.inserted_id
+            message = "Preferencias guardadas"
+            status_code = 201
 
         profile_patch = build_effective_profile({}, preferences)
         profiles_col.update_one(
@@ -1183,9 +1210,9 @@ FORMATO JSON OBLIGATORIO:
         )
 
         return jsonify({
-            "message": "Preferencias guardadas",
+            "message": message,
             "preferences": serialize(doc),
-        }), 201
+        }), status_code
 
     @app.route("/preferences/me", methods=["GET"])
     def get_preferences():
