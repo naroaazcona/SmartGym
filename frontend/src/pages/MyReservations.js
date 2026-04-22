@@ -87,7 +87,7 @@ export async function MyReservationsPage() {
         <div style="padding:14px; border-radius:12px; background:var(--surface-1, #fff); border:1px solid var(--border); display:flex; flex-direction:column; gap:8px;">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
             <div>
-              <div class="kicker">${repairText(session.day || "Día")}</div>
+              <div class="field-label">${repairText(session.day || "Día")}</div>
               <div style="font-weight:900; font-size:15px;">${repairText(session.focus || "Sesión")}</div>
             </div>
             ${session.duration_min ? `<span class="badge green">${session.duration_min} min</span>` : ""}
@@ -126,9 +126,7 @@ export async function MyReservationsPage() {
   setTimeout(() => {
     authService.loadSession()
       .then((freshMe) => {
-        const titleEl = document.querySelector("#mis-reservas-user");
-        if (!titleEl || !freshMe) return;
-        titleEl.textContent = freshMe?.profile?.firstName || freshMe?.name || freshMe?.email || "Socio";
+        if (!freshMe) return;
       })
       .catch(() => {});
 
@@ -220,7 +218,7 @@ export async function MyReservationsPage() {
         <section class="hero">
           <div class="card" style="display:flex; flex-direction:column; gap:16px;">
             <div class="kicker">MIS RESERVAS</div>
-            <h2 class="h2" id="mis-reservas-user">${displayName}</h2>
+            <h2 class="h2">Tus reservas realizadas</h2>
             <p class="sub">Tus próximas clases, tu histórico y tu plan de entrenamiento guardado.</p>
 
             <div class="card" style="background: var(--surface-2); border-color: var(--border); box-shadow:none;">

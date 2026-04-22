@@ -3,7 +3,7 @@ import { authStore } from "../state/authStore.js";
 import { authService } from "../services/authService.js";
 import { navigate } from "../router.js";
 import { gymService } from "../services/gymService.js";
-import { trainingService } from "../services/trainingService.js";
+
 
 export async function TrainerDashboard() {
   const me = await authService.loadSession().catch(() => authStore.me);
@@ -65,6 +65,7 @@ export async function TrainerDashboard() {
 
   const buildRangeLabel = (range) => {
     if (!range) return "rango actual";
+    if (range.mode === "all") return "todas las clases";
     if (range.mode === "today") return "hoy";
     if (range.mode === "history") return "historial";
     if (!range.from && !range.to) return "sin filtro";
@@ -100,123 +101,6 @@ export async function TrainerDashboard() {
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
 
-  const formatMemberDate = (value) => {
-    if (!value) return "Sin fecha";
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return "Sin fecha";
-    return parsed.toLocaleString("es-ES", {
-      day: "2-digit",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const toListValues = (value) => {
-    if (Array.isArray(value)) {
-      return value.map((item) => String(item || "").trim()).filter(Boolean);
-    }
-    if (typeof value === "string") {
-      return value
-        .split(/[;,]+/)
-        .map((item) => String(item || "").trim())
-        .filter(Boolean);
-    }
-    return [];
-  };
-
-  const summarizePreference = (value, fallback = "Sin definir") => {
-    const items = toListValues(value);
-    if (items.length) return items.join(", ");
-    const text = String(value || "").trim();
-    return text || fallback;
-  };
-
-  const displayMemberName = (member = {}) => {
-    const user = member?.user || {};
-    const first = String(user.first_name || "").trim();
-    const last = String(user.last_name || "").trim();
-    const full = `${first} ${last}`.trim();
-    return full || String(user.name || user.email || `Usuario ${user.id || ""}`).trim();
-  };
-
-  const renderMemberOverviewCards = (members = []) => {
-    if (!members.length) {
-      return `
-        <div class="empty-state" style="padding:24px 16px;">
-          <p class="empty-title">Sin usuarios para mostrar</p>
-          <p class="empty-sub">Todavia no hay usuarios registrados.</p>
-        </div>
-      `;
-    }
-
-    return members
-      .map((member) => {
-        const user = member?.user || {};
-        const preferences = member?.preferences || {};
-        const logs = Array.isArray(member?.logs) ? member.logs : [];
-        const role = String(user.role || "member").toLowerCase();
-        const roleLabel = role === "admin" ? "Admin" : role === "trainer" ? "Trainer" : "Member";
-
-        const goal = summarizePreference(preferences.goal, "Sin objetivo");
-        const training = summarizePreference(preferences.preferred_training, "Sin preferencia");
-        const injuries = summarizePreference(preferences.injuries, "Sin lesiones");
-        const equipment = summarizePreference(preferences.available_equipment, "Sin especificar");
-
-        const logsHtml = logs.length
-          ? `<ul class="list" style="gap:6px; margin-top:8px;">
-              ${logs
-                .map((log) => {
-                  const title = escapeHtml(log?.title || "Entrenamiento");
-                  const dateLabel = escapeHtml(formatMemberDate(log?.date || log?.createdAt));
-                  const duration = Number(log?.duration_min || 0);
-                  const durationLabel = duration > 0 ? ` - ${duration} min` : "";
-                  return `<li class="row" style="padding:8px 10px; font-size:13px;">${title} (${dateLabel}${durationLabel})</li>`;
-                })
-                .join("")}
-            </ul>`
-          : `<p class="sub" style="margin:8px 0 0;">Sin ejercicios registrados.</p>`;
-
-        return `
-          <article class="card" style="padding:14px; border-radius:14px; box-shadow:none; background:linear-gradient(180deg, rgba(255,255,255,.94), rgba(242,247,255,.95));">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
-              <div>
-                <div style="font-weight:1000; font-size:16px;">${escapeHtml(displayMemberName(member))}</div>
-                <div class="dim">${escapeHtml(user.email || "Sin email")} - ID ${escapeHtml(user.id || "-")}</div>
-              </div>
-              <span class="badge">${escapeHtml(roleLabel)}</span>
-            </div>
-
-            <div class="dim" style="margin-top:6px;">Ultima actividad: ${escapeHtml(formatMemberDate(member?.last_activity_at))}</div>
-
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:8px; margin-top:10px;">
-              <div class="row" style="padding:8px 10px; align-items:flex-start; flex-direction:column; gap:3px;">
-                <span class="kicker">Objetivo</span>
-                <span>${escapeHtml(goal)}</span>
-              </div>
-              <div class="row" style="padding:8px 10px; align-items:flex-start; flex-direction:column; gap:3px;">
-                <span class="kicker">Entrenamiento</span>
-                <span>${escapeHtml(training)}</span>
-              </div>
-              <div class="row" style="padding:8px 10px; align-items:flex-start; flex-direction:column; gap:3px;">
-                <span class="kicker">Lesiones</span>
-                <span>${escapeHtml(injuries)}</span>
-              </div>
-              <div class="row" style="padding:8px 10px; align-items:flex-start; flex-direction:column; gap:3px;">
-                <span class="kicker">Equipamiento</span>
-                <span>${escapeHtml(equipment)}</span>
-              </div>
-            </div>
-
-            <div style="margin-top:10px;">
-              <div class="kicker">Ejercicios registrados (${Number(member?.logs_total || logs.length || 0)})</div>
-              ${logsHtml}
-            </div>
-          </article>
-        `;
-      })
-      .join("");
-  };
 
   const renderCard = (cls) => {
     const booked = Number(cls.booked_count || 0);
@@ -229,7 +113,6 @@ export async function TrainerDashboard() {
 
     return `
       <article class="class-card" data-class-id="${cls.id}">
-        <div class="backdrop" style="background-image:url('${imgForType(cls.class_type_name)}')"></div>
         <div class="tag ${full ? "red" : "green"}">${cls.class_type_name || "Clase"}</div>
         <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
           <div>
@@ -249,7 +132,7 @@ export async function TrainerDashboard() {
     `;
   };
 
-  const initialRange = makeTodayRange();
+  const initialRange = { mode: "all", from: null, to: null };
 
   let classTypes = [];
   let classTypesError = "";
@@ -259,16 +142,8 @@ export async function TrainerDashboard() {
     classTypesError = err?.message || "No se pudieron cargar los tipos de clase.";
   }
 
-  const [classes, initialMembersOverviewResult] = await Promise.all([
-    gymService.listClasses({ from: initialRange.from, to: initialRange.to }).catch(() => []),
-    trainingService.getCoachMembersOverview(6).catch(() => ({ members: [], generatedAt: null })),
-  ]);
-
+  const classes = await gymService.listClasses({ from: initialRange.from, to: initialRange.to }).catch(() => []);
   const myClasses = classes.filter(isMine);
-  const initialMembersOverview = Array.isArray(initialMembersOverviewResult?.members)
-    ? initialMembersOverviewResult.members
-    : [];
-  const initialMembersGeneratedAt = initialMembersOverviewResult?.generatedAt || null;
 
   const typeOptions = classTypes.length
     ? [
@@ -283,10 +158,9 @@ export async function TrainerDashboard() {
         <div class="empty-icon">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ff5b2e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </div>
-        <p class="empty-title">Sin clases hoy</p>
-        <p class="empty-sub">No tienes clases asignadas hoy.</p>
+        <p class="empty-title">Sin clases asignadas</p>
+        <p class="empty-sub">No tienes clases asignadas aún.</p>
       </div>`;
-  const initialMembersList = renderMemberOverviewCards(initialMembersOverview);
 
   setTimeout(() => {
     const listEl = document.querySelector("#trainer-classes");
@@ -307,31 +181,16 @@ export async function TrainerDashboard() {
     const editForm = document.querySelector("#trainer-edit-class");
     const editMsg = document.querySelector("#trainer-edit-msg");
     const editCancelBtn = document.querySelector("#trainer-edit-cancel");
-    const membersListEl = document.querySelector("#trainer-members-list");
-    const membersStatusEl = document.querySelector("#trainer-members-status");
-    const membersCountEl = document.querySelector("#trainer-members-count");
-    const membersRefreshBtn = document.querySelector("#trainer-members-refresh");
 
     let current = myClasses.slice();
     let selectedClassId = null;
     let range = { ...initialRange };
-    let membersOverview = initialMembersOverview.slice();
-    let membersGeneratedAt = initialMembersGeneratedAt;
-    let membersSignature = JSON.stringify(membersOverview);
-    let membersPollTimer = null;
-    let membersLoading = false;
     const attendeeNameCache = new Map();
 
     const setStatus = (text, isError = false) => {
       if (!statusEl) return;
       statusEl.textContent = text;
       statusEl.style.color = isError ? "#b42318" : "var(--muted)";
-    };
-
-    const setMembersStatus = (text, isError = false) => {
-      if (!membersStatusEl) return;
-      membersStatusEl.textContent = text;
-      membersStatusEl.style.color = isError ? "#b42318" : "var(--muted)";
     };
 
     const applyRangeToFilter = (nextRange) => {
@@ -351,66 +210,6 @@ export async function TrainerDashboard() {
             <p class="empty-title">Sin clases en el rango</p>
             <p class="empty-sub">Ajusta el filtro para consultar otros dias o revisa el historial.</p>
           </div>`;
-    };
-
-    const renderMembersOverview = (items) => {
-      if (membersListEl) membersListEl.innerHTML = renderMemberOverviewCards(items);
-      if (membersCountEl) {
-        membersCountEl.textContent = `${items.length} usuarios`;
-      }
-    };
-
-    const loadMembersOverview = async ({ silent = false } = {}) => {
-      if (membersLoading) return;
-      membersLoading = true;
-
-      if (!silent) {
-        setMembersStatus("Actualizando usuarios y actividad...");
-      }
-      if (membersRefreshBtn) {
-        membersRefreshBtn.disabled = true;
-        membersRefreshBtn.textContent = "Actualizando...";
-      }
-
-      try {
-        const res = await trainingService.getCoachMembersOverview(6);
-        const items = Array.isArray(res?.members) ? res.members : [];
-        const nextSignature = JSON.stringify(items);
-        const changed = nextSignature !== membersSignature;
-
-        membersOverview = items;
-        membersGeneratedAt = res?.generatedAt || null;
-        membersSignature = nextSignature;
-        renderMembersOverview(membersOverview);
-
-        if (!silent || changed) {
-          setMembersStatus(`Sincronizado: ${formatMemberDate(membersGeneratedAt)}.`);
-        }
-      } catch (err) {
-        if (!silent) {
-          setMembersStatus(err?.message || "No se pudo cargar el resumen de usuarios.", true);
-        }
-      } finally {
-        membersLoading = false;
-        if (membersRefreshBtn) {
-          membersRefreshBtn.disabled = false;
-          membersRefreshBtn.textContent = "Actualizar usuarios";
-        }
-      }
-    };
-
-    const startMembersPolling = () => {
-      if (membersPollTimer) {
-        window.clearInterval(membersPollTimer);
-      }
-      membersPollTimer = window.setInterval(() => {
-        if (!membersListEl || !document.body.contains(membersListEl)) {
-          if (membersPollTimer) window.clearInterval(membersPollTimer);
-          membersPollTimer = null;
-          return;
-        }
-        loadMembersOverview({ silent: true }).catch(() => {});
-      }, 8000);
     };
 
     const resetReservations = () => {
@@ -543,10 +342,7 @@ export async function TrainerDashboard() {
 
       setStatus("Actualizando clases...");
       try {
-        const params = {};
-        if (range.from) params.from = range.from;
-        if (range.to) params.to = range.to;
-
+        const params = { from: range.from ?? null, to: range.to ?? null };
         const data = await gymService.listClasses(params);
         current = data.filter(isMine);
         renderList(current);
@@ -790,7 +586,7 @@ export async function TrainerDashboard() {
       }
 
       if (!from && !to) {
-        loadClasses(makeTodayRange());
+        loadClasses({ mode: "all", from: null, to: null });
         return;
       }
 
@@ -810,16 +606,10 @@ export async function TrainerDashboard() {
     });
 
     refreshBtn?.addEventListener("click", () => loadClasses());
-    membersRefreshBtn?.addEventListener("click", () => {
-      loadMembersOverview({ silent: false }).catch(() => {});
-    });
 
     renderList(current);
-    renderMembersOverview(membersOverview);
     applyRangeToFilter(range);
     setStatus(`Mostrando ${current.length} clases (${buildRangeLabel(range)}).`);
-    setMembersStatus(`Sincronizado: ${formatMemberDate(membersGeneratedAt)}.`);
-    startMembersPolling();
   }, 0);
 
   return `
@@ -916,22 +706,6 @@ export async function TrainerDashboard() {
                 <div class="kicker" id="trainer-res-title">Reservas de clase</div>
                 <div class="dim" id="trainer-res-status">Selecciona una clase para ver asistentes.</div>
                 <ul class="list" id="trainer-reservations" style="margin-top:10px;"></ul>
-              </div>
-
-              <div class="card trainer-panel trainer-members-panel">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
-                  <div>
-                    <div class="kicker">Usuarios registrados</div>
-                    <div class="dim" id="trainer-members-count">${initialMembersOverview.length} usuarios</div>
-                  </div>
-                  <button class="btn btn-ghost" type="button" id="trainer-members-refresh">Actualizar usuarios</button>
-                </div>
-                <div class="dim" id="trainer-members-status" style="margin-top:8px;">
-                  Sincronizado: ${escapeHtml(formatMemberDate(initialMembersGeneratedAt))}.
-                </div>
-                <div id="trainer-members-list" style="display:grid; gap:10px; margin-top:10px;">
-                  ${initialMembersList}
-                </div>
               </div>
 
               <div class="card trainer-panel trainer-edit-panel" id="trainer-edit-card" style="display:none;">

@@ -43,6 +43,7 @@ export function Navbar() {
             ${role === "member" ? `<a class="linkbtn" href="#/member">Clases</a>` : ``}
             ${role === "member" ? `<a class="linkbtn" href="#/member-ia">Entrenamientos y Dieta</a>` : ``}
             ${role === "member" ? `<a class="linkbtn" href="#/mis-reservas">Mis reservas</a>` : ``}
+            ${role === "member" ? `<a class="linkbtn" href="#/ideas-rapidas">Ideas rápidas</a>` : ``}
             ${role === "trainer" ? `<a class="linkbtn" href="#/trainer">${trainerTabLabel}</a>` : ``}
             ${role === "trainer" ? `<a class="linkbtn" href="#/trainer-usuarios">Usuarios</a>` : ``}
             ${role === "admin" ? `<a class="linkbtn" href="#/admin">Admin</a>` : ``}

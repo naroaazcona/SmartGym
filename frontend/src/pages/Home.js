@@ -281,7 +281,7 @@ export async function HomePage() {
             <div style="font-weight:1000; font-size:18px;">${p.title}</div>
             <div class="dim">${p.time}</div>
             <p class="sub" style="margin:0;">${p.tip}</p>
-            <div class="dim" style="margin-top:8px; font-weight:700;">Accede para guardar esta idea</div>
+            <div class="dim" style="margin-top:8px; font-weight:700;">${isOnline ? "Clic para ver el plan completo" : "Accede para guardar esta idea"}</div>
           </div>
         </div>
       `
@@ -302,11 +302,17 @@ export async function HomePage() {
       btn.addEventListener("click", () => navigate("/login"));
     });
     document.querySelectorAll(".js-quick-login").forEach((card) => {
-      card.addEventListener("click", () => goToUserArea());
+      const goToIdeas = () => {
+        const r = authStore.role;
+        if (r === "member") navigate("/ideas-rapidas");
+        else if (r) goToUserArea();
+        else navigate("/login");
+      };
+      card.addEventListener("click", () => goToIdeas());
       card.addEventListener("keydown", (event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
-          goToUserArea();
+          goToIdeas();
         }
       });
     });

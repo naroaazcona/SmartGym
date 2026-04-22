@@ -52,7 +52,6 @@ export async function AdminDashboard() {
     const full = Number(cls.booked_count || 0) >= Number(cls.capacity);
     return `
       <article class="class-card" data-class-id="${cls.id}">
-        <div class="backdrop" style="background-image:url('${imgForType(cls.class_type_name)}')"></div>
         <div class="tag red">${cls.class_type_name || "Clase"}</div>
         <div style="display:flex; justify-content:space-between; gap:8px; align-items:flex-start;">
           <div>
@@ -443,7 +442,6 @@ export async function AdminDashboard() {
             <div class="admin-hero">
               <div class="floating-stat"><span class="lbl">Clases</span><span class="val">${classes.length}</span></div>
               <div class="floating-stat"><span class="lbl">Tipos disponibles</span><span class="val" id="admin-class-type-count">${classTypes.length}</span></div>
-              <div class="floating-stat"><span class="lbl">Sesión</span><span class="val">${isOnline ? "Activa" : "Inicia sesión"}</span></div>
             </div>
 
             <div class="admin-grid">

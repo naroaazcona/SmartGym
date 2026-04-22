@@ -103,25 +103,25 @@ const renderMemberCards = (members = []) => {
 
           <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:8px; margin-top:10px;">
             <div class="row" style="padding:8px 10px; align-items:flex-start; flex-direction:column; gap:3px;">
-              <span class="kicker">Objetivo</span>
+              <span class="field-label">Objetivo</span>
               <span>${escapeHtml(goal)}</span>
             </div>
             <div class="row" style="padding:8px 10px; align-items:flex-start; flex-direction:column; gap:3px;">
-              <span class="kicker">Entrenamiento</span>
+              <span class="field-label">Entrenamiento</span>
               <span>${escapeHtml(training)}</span>
             </div>
             <div class="row" style="padding:8px 10px; align-items:flex-start; flex-direction:column; gap:3px;">
-              <span class="kicker">Lesiones</span>
+              <span class="field-label">Lesiones</span>
               <span>${escapeHtml(injuries)}</span>
             </div>
             <div class="row" style="padding:8px 10px; align-items:flex-start; flex-direction:column; gap:3px;">
-              <span class="kicker">Equipamiento</span>
+              <span class="field-label">Equipamiento</span>
               <span>${escapeHtml(equipment)}</span>
             </div>
           </div>
 
           <div style="margin-top:10px;">
-            <div class="kicker">Ejercicios registrados (${Number(member?.logs_total || logs.length || 0)})</div>
+            <div class="field-label">Ejercicios registrados (${Number(member?.logs_total || logs.length || 0)})</div>
             ${logsHtml}
           </div>
         </article>

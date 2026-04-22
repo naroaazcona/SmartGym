@@ -64,7 +64,7 @@ const renderRecommendationClassCard = (item) => {
     <article class="card member-rec-card" style="padding:14px; border-color:rgba(40,205,180,.35); background:linear-gradient(180deg, rgba(40,205,180,.12), rgba(255,255,255,.92)); box-shadow:none; display:flex; flex-direction:column; gap:8px;">
       <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
         <div>
-          <div class="kicker">${escapeHtml(item.day)}</div>
+          <div class="field-label">${escapeHtml(item.day)}</div>
           <div style="font-weight:900; font-size:16px;">${escapeHtml(item.focus)}</div>
         </div>
         <span class="badge green">${escapeHtml(item.duration)}</span>
@@ -803,7 +803,7 @@ export async function MemberAiDashboard() {
             <div style="display:flex; justify-content:space-between; gap:14px; align-items:flex-start; flex-wrap:wrap;">
               <div>
                 <div class="kicker member-hero-kicker">MEMBER AREA</div>
-                <h1 class="member-hero-title">Entrenamientos y Dieta para <span>${escapeHtml(name)}</span></h1>
+                <h2 class="h2" style="margin:0;">Entrenamientos y Dieta para <span>${escapeHtml(name)}</span></h2>
                 <p class="sub member-hero-sub">Genera, revisa y guarda tu plan personalizado. La dieta se muestra en plan Premium.</p>
               </div>
               <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -880,26 +880,26 @@ export async function MemberAiDashboard() {
 
               <form id="member-pref-form" class="member-pref-form" style="display:flex; flex-direction:column; gap:12px;">
                 <label class="member-pref-field" style="display:flex; flex-direction:column; gap:6px;">
-                  <span class="kicker">Objetivo</span>
+                  <span class="field-label">Objetivo</span>
                   <select id="member-pref-goal">${initialGoalOptions}</select>
                 </label>
 
                 <div class="member-pref-section" style="display:flex; flex-direction:column; gap:8px;">
-                  <span class="kicker">Entrenamiento preferido</span>
+                  <span class="field-label">Entrenamiento preferido</span>
                   <div class="member-pref-options-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:8px;">
                     ${initialPreferredTrainingCheckboxes}
                   </div>
                 </div>
 
                 <div class="member-pref-section" style="display:flex; flex-direction:column; gap:8px;">
-                  <span class="kicker">Lesiones o limitaciones</span>
+                  <span class="field-label">Lesiones o limitaciones</span>
                   <div class="member-pref-options-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:8px;">
                     ${initialInjuryCheckboxes}
                   </div>
                 </div>
 
                 <div class="member-pref-section" style="display:flex; flex-direction:column; gap:8px;">
-                  <span class="kicker">Equipamiento disponible</span>
+                  <span class="field-label">Equipamiento disponible</span>
                   <div class="member-pref-options-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:8px;">
                     ${initialEquipmentCheckboxes}
                   </div>
@@ -922,19 +922,19 @@ export async function MemberAiDashboard() {
 
               <form id="member-log-form" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; align-items:end;">
                 <label style="display:flex; flex-direction:column; gap:6px; min-width:180px;">
-                  <span class="kicker">Entrenamiento</span>
+                  <span class="field-label">Entrenamiento</span>
                   <input id="member-log-title" type="text" required maxlength="120" placeholder="Ej: Fuerza tren superior" />
                 </label>
                 <label style="display:flex; flex-direction:column; gap:6px; min-width:180px;">
-                  <span class="kicker">Fecha y hora</span>
+                  <span class="field-label">Fecha y hora</span>
                   <input id="member-log-date" type="datetime-local" />
                 </label>
                 <label style="display:flex; flex-direction:column; gap:6px; min-width:140px;">
-                  <span class="kicker">Duracion (min)</span>
+                  <span class="field-label">Duracion (min)</span>
                   <input id="member-log-duration" type="number" min="1" max="480" step="1" placeholder="45" />
                 </label>
                 <label style="display:flex; flex-direction:column; gap:6px; min-width:220px; grid-column:1/-1;">
-                  <span class="kicker">Notas (opcional)</span>
+                  <span class="field-label">Notas (opcional)</span>
                   <textarea id="member-log-notes" rows="2" maxlength="400" placeholder="Sensaciones, carga usada, etc."></textarea>
                 </label>
                 <div style="display:flex; justify-content:flex-end; grid-column:1/-1;">

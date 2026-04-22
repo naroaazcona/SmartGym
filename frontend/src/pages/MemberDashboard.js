@@ -13,16 +13,6 @@ import {
   normalizeText,
 } from "./memberHelpers.js";
 
-const heroImages = {
-  crossfit: "https://images.unsplash.com/photo-1558611848-73f7eb4001a1?auto=format&fit=crop&w=1400&q=80",
-  hiit: "https://images.unsplash.com/photo-1554284126-aa88f22d8b74?auto=format&fit=crop&w=1400&q=80",
-  mobility: "https://images.unsplash.com/photo-1546484959-f9a9c6c4b4c1?auto=format&fit=crop&w=1400&q=80",
-  spinning: "https://images.unsplash.com/photo-1546484475-7e0b1cd5a33e?auto=format&fit=crop&w=1400&q=80",
-  cycling: "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?auto=format&fit=crop&w=1400&q=80",
-  strength: "https://images.unsplash.com/photo-1483721310020-03333e577078?auto=format&fit=crop&w=1400&q=80",
-};
-
-const imgForType = (type) => heroImages[normalizeText(type)] || heroImages.strength;
 
 const renderEmptyState = () => `
   <div class="empty-state" style="grid-column:1/-1">
@@ -73,8 +63,7 @@ const renderMemberClassCard = (cls, options = {}) => {
   const feedbackColor = feedback?.type === "error" ? "#b42318" : "#087443";
 
   return `
-    <article class="class-card member-class-card ${demand.className}" data-class-id="${cls.id}" data-demand="${demand.key}" style="min-height:250px;">
-      <div class="backdrop" style="background-image:url('${imgForType(cls.class_type_name)}')"></div>
+    <article class="class-card member-class-card ${demand.className}" data-class-id="${cls.id}" data-demand="${demand.key}">
       <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
         <div class="tag ${full ? "red" : "green"}">${escapeHtml(cls.class_type_name || "Clase")}</div>
         <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
@@ -359,7 +348,7 @@ export async function MemberDashboard() {
             <div style="display:flex; justify-content:space-between; gap:14px; align-items:flex-start; flex-wrap:wrap;">
               <div>
                 <div class="kicker member-hero-kicker">MEMBER AREA</div>
-                <h1 class="member-hero-title">Hola, <span>${escapeHtml(name)}</span></h1>
+                <h2 class="h2" style="margin:0;">Hola, <span>${escapeHtml(name)}</span></h2>
                 <p class="sub member-hero-sub">Aquí tienes todas las clases disponibles para reservar.</p>
               </div>
               <div style="display:flex; gap:8px; flex-wrap:wrap;">

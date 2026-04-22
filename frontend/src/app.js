@@ -16,6 +16,7 @@ import { ProfilePage } from "./pages/Profile.js";
 import { MyReservationsPage } from "./pages/MyReservations.js";
 import { NotFoundPage } from "./pages/NotFound.js";
 import { SubscriptionPage } from "./pages/Subscription.js";
+import { QuickIdeasPage } from "./pages/QuickIdeas.js";
 import {
   PasswordRecoveryStartPage,
   PasswordRecoveryCodePage,
@@ -29,6 +30,7 @@ registerRoute("/perfil", ProfilePage);
 registerRoute("/member", MemberDashboard);
 registerRoute("/member-ia", MemberAiDashboard);
 registerRoute("/mis-reservas", MyReservationsPage);
+registerRoute("/ideas-rapidas", QuickIdeasPage);
 registerRoute("/trainer", TrainerDashboard);
 registerRoute("/trainer-usuarios", TrainerUsersPage);
 registerRoute("/admin", AdminDashboard);

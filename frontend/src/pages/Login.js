@@ -109,7 +109,9 @@ export async function LoginPage() {
         const me = await authService.login(email, password);
         loginFailures = 0;
         cooldownUntil = 0;
-        navigate(me?.role === "trainer" ? "/trainer" : "/");
+        if (me?.role === "admin") navigate("/admin");
+        else if (me?.role === "trainer") navigate("/trainer");
+        else navigate("/");
       } catch (ex) {
         loginFailures += 1;
         if (loginFailures >= 3) {
