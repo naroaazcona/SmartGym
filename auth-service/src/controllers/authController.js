@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const { OAuth2Client } = require('google-auth-library');
 
 const JWT_SECRET = process.env.JWT_SECRET; // Garantizado por el check en auth.js
 const JWT_EXPIRES_IN = '24h';
@@ -631,6 +632,68 @@ class AuthController {
         } catch (error) {
             console.error('Error eliminando usuario por admin:', error);
             return res.status(500).json({ error: 'Error interno del servidor' });
+        }
+    }
+
+    // Login con Google OAuth
+    static async googleLogin(req, res) {
+        try {
+            const { credential } = req.body;
+            if (!credential) {
+                return res.status(400).json({ error: 'Credencial de Google requerida' });
+            }
+
+            const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+            if (!GOOGLE_CLIENT_ID) {
+                return res.status(500).json({ error: 'Google OAuth no está configurado en el servidor' });
+            }
+
+            const client = new OAuth2Client(GOOGLE_CLIENT_ID);
+            const ticket = await client.verifyIdToken({
+                idToken: credential,
+                audience: GOOGLE_CLIENT_ID,
+            });
+
+            const payload = ticket.getPayload();
+            const { sub: googleId, email, name, given_name, family_name } = payload;
+
+            if (!email) {
+                return res.status(400).json({ error: 'No se pudo obtener el email de la cuenta de Google' });
+            }
+
+            const displayName = name ||
+                `${given_name || ''} ${family_name || ''}`.trim() ||
+                email.split('@')[0];
+
+            const { user, isNew } = await User.findOrCreateGoogleUser({
+                googleId,
+                email,
+                name: displayName,
+            });
+
+            const token = jwt.sign(
+                { userId: user.id, email: user.email, role: user.role },
+                JWT_SECRET,
+                { expiresIn: JWT_EXPIRES_IN }
+            );
+
+            res.json({
+                message: isNew ? 'Cuenta creada con Google' : 'Inicio de sesión con Google exitoso',
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    name: user.name,
+                    role: user.role,
+                },
+                token,
+                isNew,
+            });
+        } catch (error) {
+            console.error('Error en Google login:', error);
+            if (error.message?.includes('Invalid token') || error.message?.includes('Token used too late')) {
+                return res.status(401).json({ error: 'Credencial de Google inválida o expirada' });
+            }
+            res.status(500).json({ error: 'Error interno del servidor' });
         }
     }
 

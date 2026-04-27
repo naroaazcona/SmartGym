@@ -450,9 +450,13 @@ button{ font:inherit; cursor:pointer; }
 }
 
 .kicker{
+  display: none !important;
+}
+
+.field-label{
   font-size: 12px;
   color: var(--muted);
-  letter-spacing: .16em;
+  letter-spacing: .14em;
   text-transform: uppercase;
   font-weight: 900;
 }
@@ -486,7 +490,7 @@ button{ font:inherit; cursor:pointer; }
 
 .hero-block{
   display:grid;
-  grid-template-columns: 1.15fr 0.85fr;
+  grid-template-columns: 1fr 1.25fr;
   gap: 18px;
   align-items:stretch;
   background: linear-gradient(120deg, rgba(255,255,255,.95), rgba(232,238,247,.9));
@@ -523,7 +527,7 @@ button{ font:inherit; cursor:pointer; }
 .calendar-card{
   position: relative;
   width: 100%;
-  max-width: 540px;
+  max-width: 720px;
   background: linear-gradient(180deg, #ffffff 0%, #f4f7fc 100%);
   border: 1px solid rgba(13,26,45,0.12);
   border-radius: 18px;
@@ -837,6 +841,23 @@ textarea{ min-height: 110px; resize: vertical; }
   color: #000 !important;
   border: 1px solid var(--border);
   box-shadow: 0 8px 18px rgba(0,0,0,.08);
+}
+
+/* Divisor "o continúa con" en el formulario de login */
+.auth-divider{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 8px;
+  color: #888;
+  font-size: 13px;
+}
+.auth-divider::before,
+.auth-divider::after{
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
 }
 
 /* UTILS */
@@ -1858,13 +1879,6 @@ input:focus, select:focus, textarea:focus{
 }
 
 /* Global card title emphasis */
-.card .kicker{
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: .14em;
-  color: var(--muted);
-}
-
 .card h2,
 .card h3,
 .card .h2{
@@ -1905,7 +1919,7 @@ input:focus, select:focus, textarea:focus{
   letter-spacing: normal;
 }
 
-.member-pref-field .kicker{
+.member-pref-field .field-label{
   margin-bottom: 2px;
 }
 
@@ -1975,13 +1989,6 @@ input:focus, select:focus, textarea:focus{
 }
 
 /* Global title scale across the app */
-.kicker{
-  font-size: 12px !important;
-  font-weight: 900 !important;
-  letter-spacing: .14em !important;
-  line-height: 1.2;
-  color: var(--muted) !important;
-}
 
 .calendar-kicker{
   font-size: 12px;

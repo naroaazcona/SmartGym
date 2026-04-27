@@ -404,6 +404,58 @@ static async findBasicByIds(ids = []) {
     return result.rows;
 }
 
+static async findOrCreateGoogleUser({ googleId, email, name }) {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        let result = await client.query(
+            'SELECT * FROM users WHERE google_id = $1 OR email = $2 LIMIT 1',
+            [googleId, email]
+        );
+        let user = result.rows[0];
+        let isNew = false;
+
+        if (user) {
+            if (!user.google_id) {
+                await client.query(
+                    'UPDATE users SET google_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+                    [googleId, user.id]
+                );
+                user.google_id = googleId;
+            }
+        } else {
+            result = await client.query(
+                `INSERT INTO users (email, password, name, role, google_id)
+                 VALUES ($1, NULL, $2, 'member', $3)
+                 RETURNING id, email, name, role, google_id, created_at`,
+                [email, name, googleId]
+            );
+            user = result.rows[0];
+            isNew = true;
+
+            const nameParts = String(name || '').trim().split(/\s+/);
+            const firstName = nameParts[0] || 'Usuario';
+            const lastName = nameParts.slice(1).join(' ') || '-';
+
+            await client.query(
+                `INSERT INTO user_profiles (user_id, first_name, last_name, experience_level)
+                 VALUES ($1, $2, $3, 'beginner')
+                 ON CONFLICT (user_id) DO NOTHING`,
+                [user.id, firstName, lastName]
+            );
+        }
+
+        await client.query('COMMIT');
+        return { user, isNew };
+    } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+    } finally {
+        client.release();
+    }
+}
+
 static async createPasswordRecoveryRequest(userId, verificationCode, codeExpiresAt) {
     const codeHash = await bcrypt.hash(String(verificationCode), 10);
     const client = await pool.connect();

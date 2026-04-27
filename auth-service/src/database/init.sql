@@ -131,5 +131,10 @@ CREATE TABLE IF NOT EXISTS password_recovery_requests (
 CREATE INDEX IF NOT EXISTS idx_pwd_recovery_user_id ON password_recovery_requests(user_id);
 CREATE INDEX IF NOT EXISTS idx_pwd_recovery_code_expires ON password_recovery_requests(code_expires_at);
 
+-- Soporte para Google OAuth
+ALTER TABLE users ALTER COLUMN password DROP NOT NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_users_google_id ON users(google_id) WHERE google_id IS NOT NULL;
+
 -- Verificar datos insertados
 SELECT 'Base de datos inicializada correctamente' as status;

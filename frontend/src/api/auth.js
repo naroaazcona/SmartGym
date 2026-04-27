@@ -4,6 +4,9 @@ export const authApi = {
   login: (email, password) =>
     apiFetch("/auth/login", { method: "POST", body: { email, password } }),
 
+  googleLogin: (credential) =>
+    apiFetch("/auth/google", { method: "POST", body: { credential } }),
+
   startPasswordRecovery: (email, phone) =>
     apiFetch("/auth/password-recovery/start", {
       method: "POST",

@@ -22,7 +22,10 @@ export function registerRoute(path, handler) {
 }
 
 export function navigate(path) {
-  location.hash = path.startsWith("#") ? path : `#${path}`;
+  const newHash = path.startsWith("#") ? path : `#${path}`;
+  // "/" + newHash produce una URL absoluta (e.g. "/#/onboarding") que elimina query params
+  history.replaceState(null, "", "/" + newHash);
+  setTimeout(renderRoute, 0);
 }
 
 /* ── Network error banner ── */

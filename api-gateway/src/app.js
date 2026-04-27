@@ -52,6 +52,7 @@ const generalLimiter = rateLimit({
 // --- Aplicar limiters ---
 app.use("/auth/login", authLimiter);
 app.use("/auth/register", authLimiter);
+app.use("/auth/google", authLimiter);
 app.use("/auth/password-recovery/start", authLimiter);
 app.use("/auth/password-recovery/verify", authLimiter);
 app.use("/auth/password-recovery/reset", authLimiter);

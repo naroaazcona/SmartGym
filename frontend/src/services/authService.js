@@ -38,6 +38,17 @@ export const authService = {
     return me;
   },
 
+  async loginWithGoogle(credential) {
+    const res = await authApi.googleLogin(credential);
+    const token = res?.token || res?.accessToken;
+    if (!token) throw new Error("Token no recibido del servicio de autenticacion");
+
+    authStore.setToken(token);
+    const me = res?.user || (await authApi.me());
+    authStore.setMe(me);
+    return { me, isNew: res?.isNew === true };
+  },
+
   async startPasswordRecovery(email, phone) {
     return authApi.startPasswordRecovery(email, phone);
   },

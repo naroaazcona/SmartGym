@@ -2,6 +2,7 @@ import { Navbar } from "../components/Navbar.js";
 import { authService } from "../services/authService.js";
 import { authStore } from "../state/authStore.js";
 import { navigate } from "../router.js";
+import { CONFIG } from "../config.js";
 
 const ALLOWED_EMAIL_PROVIDERS = ["gmail", "outlook", "yahoo"];
 
@@ -53,6 +54,59 @@ const friendlyError = (ex, fallback) => {
   return msg || fallback;
 };
 
+function navigateAfterAuth(role) {
+  if (role === "admin") navigate("/admin");
+  else if (role === "trainer") navigate("/trainer");
+  else navigate("/");
+}
+
+function initGoogleSignIn(googleError, show) {
+  if (!CONFIG.GOOGLE_CLIENT_ID || CONFIG.GOOGLE_CLIENT_ID.startsWith("TU_")) return;
+
+  const waitForGSI = (retries = 20) => {
+    if (window.google?.accounts?.id) {
+      window.google.accounts.id.initialize({
+        client_id: CONFIG.GOOGLE_CLIENT_ID,
+        callback: async (response) => {
+          if (googleError) googleError.textContent = "";
+          try {
+            const { me, isNew } = await authService.loginWithGoogle(response.credential);
+            if (isNew) {
+              // Rellenar datos adicionales antes de ir a suscripción
+              const nameEl = document.querySelector("#gc-firstName");
+              const lastEl = document.querySelector("#gc-lastName");
+              if (nameEl && me?.profile?.firstName) nameEl.value = me.profile.firstName;
+              if (lastEl && me?.profile?.lastName)  lastEl.value = me.profile.lastName;
+              show("google-complete");
+            } else {
+              navigateAfterAuth(me?.role);
+            }
+          } catch (ex) {
+            if (googleError) googleError.textContent = friendlyError(ex, "Error al iniciar sesión con Google.");
+          }
+        },
+      });
+
+      const btnContainer = document.querySelector("#google-btn-container");
+      if (btnContainer) {
+        window.google.accounts.id.renderButton(btnContainer, {
+          type: "standard",
+          shape: "rectangular",
+          theme: "outline",
+          text: "continue_with",
+          size: "large",
+          locale: "es",
+          width: btnContainer.offsetWidth || 340,
+        });
+      }
+    } else if (retries > 0) {
+      setTimeout(() => waitForGSI(retries - 1), 150);
+    }
+  };
+
+  waitForGSI();
+}
+
 export async function LoginPage() {
   setTimeout(() => {
     const tabs = document.querySelectorAll("[data-auth-tab]");
@@ -61,6 +115,7 @@ export async function LoginPage() {
     const registerForm = document.querySelector("#register-form");
     const loginError = document.querySelector("#login-error");
     const registerError = document.querySelector("#register-error");
+    const googleError = document.querySelector("#google-error");
     const loginBtn = document.querySelector("#login-submit");
     const forgotBtn = document.querySelector("#forgot-password-btn");
     const registerBtn = document.querySelector("#register-submit");
@@ -71,6 +126,8 @@ export async function LoginPage() {
       tabs.forEach((btn) => btn.classList.toggle("active", btn.dataset.authTab === mode));
       views.forEach((block) => block.classList.toggle("hidden", block.dataset.authView !== mode));
     };
+
+    initGoogleSignIn(googleError, show);
 
     tabs.forEach((btn) => {
       btn.addEventListener("click", () => show(btn.dataset.authTab));
@@ -109,9 +166,7 @@ export async function LoginPage() {
         const me = await authService.login(email, password);
         loginFailures = 0;
         cooldownUntil = 0;
-        if (me?.role === "admin") navigate("/admin");
-        else if (me?.role === "trainer") navigate("/trainer");
-        else navigate("/");
+        navigateAfterAuth(me?.role);
       } catch (ex) {
         loginFailures += 1;
         if (loginFailures >= 3) {
@@ -120,6 +175,39 @@ export async function LoginPage() {
         if (loginError) loginError.textContent = friendlyError(ex, "Error al iniciar sesión. Revisa credenciales.");
       }
       setLoading(loginBtn, false, "Entrar");
+    });
+
+    const googleCompleteForm = document.querySelector("#google-complete-form");
+    const googleCompleteError = document.querySelector("#google-complete-error");
+    const googleCompleteBtn = document.querySelector("#google-complete-submit");
+    attachPhoneSanitizer(googleCompleteForm?.gc_phone);
+
+    googleCompleteForm?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (googleCompleteError) googleCompleteError.textContent = "";
+
+      const payload = {
+        firstName:  googleCompleteForm.gc_firstName.value.trim(),
+        lastName:   googleCompleteForm.gc_lastName.value.trim(),
+        phone:      normalizeEsPhone(googleCompleteForm.gc_phone.value),
+        birthDate:  googleCompleteForm.gc_birthDate.value,
+        gender:     googleCompleteForm.gc_gender.value,
+        heightCm:   googleCompleteForm.gc_heightCm.value ? Number(googleCompleteForm.gc_heightCm.value) : undefined,
+        weightKg:   googleCompleteForm.gc_weightKg.value ? Number(googleCompleteForm.gc_weightKg.value) : undefined,
+      };
+
+      setLoading(googleCompleteBtn, true, "Guardando...");
+      try {
+        await authService.updateProfile(payload);
+        const userId = authStore.me?.id;
+        if (userId) localStorage.setItem(`onboarding_required_${userId}`, "1");
+        localStorage.setItem("onboarding_required", "1");
+        navigate("/suscripcion");
+      } catch (ex) {
+        if (googleCompleteError) googleCompleteError.textContent = friendlyError(ex, "Error al guardar los datos.");
+      } finally {
+        setLoading(googleCompleteBtn, false, "Continuar");
+      }
     });
 
     registerForm?.addEventListener("submit", async (e) => {
@@ -207,6 +295,65 @@ export async function LoginPage() {
                 </div>
 
                 <div id="login-error" class="error"></div>
+              </form>
+
+              <div class="auth-divider"><span>o continúa con</span></div>
+              <div id="google-btn-container" style="display:flex; justify-content:center; margin-top:8px;"></div>
+              <div id="google-error" class="error" style="margin-top:8px;"></div>
+            </div>
+
+            <div data-auth-view="google-complete" class="hidden">
+              <div class="kicker" style="margin-bottom:4px;">Un último paso</div>
+              <p class="sub" style="margin-bottom:16px;">Completa tu perfil para continuar con el registro.</p>
+              <form id="google-complete-form">
+                <div class="form-row">
+                  <div class="form-col">
+                    <label>Nombre</label>
+                    <input id="gc-firstName" name="gc_firstName" type="text" autocomplete="given-name" placeholder="Ana" required />
+                  </div>
+                  <div class="form-col">
+                    <label>Apellidos</label>
+                    <input id="gc-lastName" name="gc_lastName" type="text" autocomplete="family-name" placeholder="López" required />
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-col">
+                    <label>Teléfono</label>
+                    <div class="phone-group">
+                      <span class="phone-prefix">+34</span>
+                      <input name="gc_phone" type="tel" autocomplete="tel" placeholder="600000000" required />
+                    </div>
+                  </div>
+                  <div class="form-col">
+                    <label>Fecha de nacimiento</label>
+                    <input name="gc_birthDate" type="date" required />
+                  </div>
+                </div>
+
+                <label>Género</label>
+                <select name="gc_gender" required>
+                  <option value="" disabled selected hidden>Elige una opción</option>
+                  <option value="female">Femenino</option>
+                  <option value="male">Masculino</option>
+                  <option value="other">Otro / Prefiero no decir</option>
+                </select>
+
+                <div class="form-row">
+                  <div class="form-col">
+                    <label>Peso (kg) <span class="dim">(opcional)</span></label>
+                    <input name="gc_weightKg" type="number" min="1" step="0.1" placeholder="70" />
+                  </div>
+                  <div class="form-col">
+                    <label>Altura (cm) <span class="dim">(opcional)</span></label>
+                    <input name="gc_heightCm" type="number" min="50" max="260" step="1" placeholder="170" />
+                  </div>
+                </div>
+
+                <div class="mtop" style="display:flex; gap:12px; flex-wrap:wrap;">
+                  <button id="google-complete-submit" class="btn btn-primary" type="submit">Continuar</button>
+                </div>
+                <div id="google-complete-error" class="error"></div>
               </form>
             </div>
 

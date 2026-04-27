@@ -18,6 +18,7 @@ app.use(express.json());
 //Publicas
 app.post('/register', AuthController.register);
 app.post('/login', AuthController.login);
+app.post('/google', AuthController.googleLogin);
 app.post('/password-recovery/start', AuthController.startPasswordRecovery);
 app.post('/password-recovery/verify', AuthController.verifyPasswordRecovery);
 app.post('/password-recovery/reset', AuthController.resetPassword);
