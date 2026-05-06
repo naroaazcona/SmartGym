@@ -324,8 +324,16 @@ export async function MemberAiDashboard() {
     const recNotesEl = document.querySelector("#member-rec-notes");
     const recSaveBtn = document.querySelector("#member-rec-save");
     const recRefreshBtn = document.querySelector("#member-rec-refresh");
-    const prefTabBtn = document.querySelector("#member-scroll-preferences");
-    const prefHubEl = document.querySelector("#member-pref-hub");
+    const tabBtns = document.querySelectorAll("[data-ia-tab]");
+    const tabPanels = document.querySelectorAll("[data-ia-panel]");
+
+    const showTab = (name) => {
+      tabBtns.forEach((b) => b.classList.toggle("active", b.dataset.iaTab === name));
+      tabPanels.forEach((p) => p.classList.toggle("hidden", p.dataset.iaPanel !== name));
+    };
+
+    tabBtns.forEach((b) => b.addEventListener("click", () => showTab(b.dataset.iaTab)));
+    showTab("rec");
 
     const prefGoalEl = document.querySelector("#member-pref-goal");
     const prefStatusEl = document.querySelector("#member-pref-status");
@@ -782,10 +790,6 @@ export async function MemberAiDashboard() {
       logLoadMoreBtn.textContent = "Cargando...";
       await loadLogs({ page: currentLogPage + 1, append: true, silent: true });
     });
-    prefTabBtn?.addEventListener("click", () => {
-      prefHubEl?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-
     renderRecommendations(currentRecommendations);
     applyPreferencesToForm(currentPreferences);
     lastPrefRecSignature = JSON.stringify(buildRecommendationRequestParams(currentPreferences));
@@ -813,18 +817,11 @@ export async function MemberAiDashboard() {
             </div>
 
             <div style="display:flex; flex-wrap:wrap; gap:8px;">
-              <span class="tab-btn active" style="display:inline-flex; align-items:center;">Entrenamientos y Dieta</span>
-              <button
-                class="tab-btn member-tab-link"
-                id="member-scroll-preferences"
-                type="button"
-                style="display:inline-flex; align-items:center;"
-              >
-                Preferencias e historial
-              </button>
+              <button class="tab-btn active" type="button" data-ia-tab="rec">Recomendación IA</button>
+              <button class="tab-btn" type="button" data-ia-tab="pref">Preferencias</button>
             </div>
 
-            <aside class="card" style="display:flex; flex-direction:column; gap:12px; background:var(--surface-2); border-color:var(--border); box-shadow:none;">
+            <aside data-ia-panel="rec" class="card" style="display:flex; flex-direction:column; gap:12px; background:var(--surface-2); border-color:var(--border); box-shadow:none;">
               <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
                 <div>
                   <div class="kicker card-start-kicker">Recomendación personalizada</div>
@@ -863,7 +860,8 @@ export async function MemberAiDashboard() {
             </aside>
 
             <aside
-              class="card member-pref-card"
+              data-ia-panel="pref"
+              class="card member-pref-card hidden"
               id="member-pref-hub"
               style="display:flex; flex-direction:column; gap:12px; background:var(--surface-2); border-color:var(--border); box-shadow:none;"
             >
@@ -909,52 +907,6 @@ export async function MemberAiDashboard() {
               <div class="dim" id="member-pref-status">Preferencias cargadas.</div>
             </aside>
 
-            <aside class="card" style="display:flex; flex-direction:column; gap:12px; background:var(--surface-2); border-color:var(--border); box-shadow:none;">
-              <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
-                <div>
-                  <div class="kicker card-start-kicker">Registro de entrenamientos</div>
-                  <div class="dim">Registra tus sesiones y consulta el historial.</div>
-                </div>
-                <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                  <button class="btn btn-ghost" id="member-log-refresh" type="button">Actualizar historial</button>
-                </div>
-              </div>
-
-              <form id="member-log-form" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; align-items:end;">
-                <label style="display:flex; flex-direction:column; gap:6px; min-width:180px;">
-                  <span class="field-label">Entrenamiento</span>
-                  <input id="member-log-title" type="text" required maxlength="120" placeholder="Ej: Fuerza tren superior" />
-                </label>
-                <label style="display:flex; flex-direction:column; gap:6px; min-width:180px;">
-                  <span class="field-label">Fecha y hora</span>
-                  <input id="member-log-date" type="datetime-local" />
-                </label>
-                <label style="display:flex; flex-direction:column; gap:6px; min-width:140px;">
-                  <span class="field-label">Duracion (min)</span>
-                  <input id="member-log-duration" type="number" min="1" max="480" step="1" placeholder="45" />
-                </label>
-                <label style="display:flex; flex-direction:column; gap:6px; min-width:220px; grid-column:1/-1;">
-                  <span class="field-label">Notas (opcional)</span>
-                  <textarea id="member-log-notes" rows="2" maxlength="400" placeholder="Sensaciones, carga usada, etc."></textarea>
-                </label>
-                <div style="display:flex; justify-content:flex-end; grid-column:1/-1;">
-                  <button class="btn btn-primary" id="member-log-save" type="submit">Registrar entrenamiento</button>
-                </div>
-              </form>
-
-              <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
-                <div class="dim" id="member-log-status">Historial listo.</div>
-                <div class="dim" id="member-log-count">${initialLogs.length}/${initialLogsTotal} entrenamientos</div>
-              </div>
-
-              <div id="member-log-list">
-                ${initialLogsHtml}
-              </div>
-
-              <div style="display:flex; justify-content:center;">
-                <button class="btn btn-ghost" id="member-log-more" type="button" ${initialLogsPage < initialLogsTotalPages ? "" : "style='display:none;'"}>Cargar mas</button>
-              </div>
-            </aside>
           </div>
         </section>
       </main>

@@ -1,5 +1,6 @@
 import { registerRoute, renderRoute, navigate } from "./router.js";
 import { authService } from "./services/authService.js";
+import { apiFetch } from "./api/client.js";
 
 import { HomePage } from "./pages/Home.js";
 import { LoginPage } from "./pages/Login.js";
@@ -44,6 +45,19 @@ registerRoute("/recuperar-codigo", PasswordRecoveryCodePage);
 registerRoute("/cambiar-password", PasswordRecoveryResetPage);
 
 await authService.loadSession();
+
+// Si Stripe redirige de vuelta con ?success=true, confirmar el pago e ir directo a onboarding.
+const _sp = new URLSearchParams(location.search);
+if (_sp.get("success") === "true" || _sp.get("session_id")) {
+  const sid = _sp.get("session_id") || "";
+  try {
+    await apiFetch("/auth/subscription/confirm", {
+      method: "POST",
+      body: sid ? { sessionId: sid } : {},
+    });
+  } catch { /* si falla el webhook ya lo habrá procesado */ }
+  history.replaceState(null, "", "/#/onboarding");
+}
 
 if (!location.hash) navigate("/");
 renderRoute(); // SOLO una vez

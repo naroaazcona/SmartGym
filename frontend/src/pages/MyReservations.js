@@ -1,10 +1,27 @@
-﻿import { Navbar } from "../components/Navbar.js";
+import { Navbar } from "../components/Navbar.js";
 import { authStore } from "../state/authStore.js";
 import { authService } from "../services/authService.js";
-import { navigate } from "../router.js";
+import { navigate, showToast } from "../router.js";
 import { gymService } from "../services/gymService.js";
 import { trainingService } from "../services/trainingService.js";
 import { repairText } from "./memberHelpers.js";
+
+const toLocalDateTimeValue = (date) => {
+  const d = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(d.getTime())) return "";
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
+};
+
+const formatLogDate = (value) => {
+  if (!value) return "Fecha sin registrar";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "Fecha inválida";
+  return parsed.toLocaleString("es-ES", {
+    day: "2-digit", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+};
 
 export async function MyReservationsPage() {
   if (!authStore.token) {
@@ -17,20 +34,9 @@ export async function MyReservationsPage() {
 
   const fmt = (iso) =>
     new Date(iso).toLocaleString("es-ES", {
-      weekday: "short",
-      day: "2-digit",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-  const fmtDate = (iso) => {
-    if (!iso) return "";
-    return new Date(iso).toLocaleString("es-ES", {
-      day: "2-digit", month: "short", year: "numeric",
+      weekday: "short", day: "2-digit", month: "short",
       hour: "2-digit", minute: "2-digit",
     });
-  };
 
   const renderList = (items, canCancel = false) =>
     items.length
@@ -64,55 +70,22 @@ export async function MyReservationsPage() {
           </div>
         </li>`;
 
-  const renderSavedPlan = (doc) => {
-    if (!doc) {
-      return `
-        <div style="padding:20px; text-align:center; color:var(--muted);">
-          <div style="font-size:32px; margin-bottom:8px;">🤖</div>
-          <div style="font-weight:700; margin-bottom:4px;">Sin plan guardado</div>
-          <p class="sub" style="margin:0;">Genera y guarda un plan desde <a href="#/member-ia" style="color:var(--accent); font-weight:700;">Entrenamientos y Dieta</a>.</p>
-        </div>`;
-    }
-
-    const rec = doc.recommendation || doc;
-    const sessions = Array.isArray(rec.split) ? rec.split : [];
-    const notes = repairText(rec.notes || "");
-    const savedAt = doc.savedAt || doc.createdAt || "";
-    const level = repairText(doc.level || doc.profile?.experience_level || "");
-    const goal = repairText(doc.profile?.goal || "");
-
-    const dayCards = sessions.map((session) => {
-      const exercises = Array.isArray(session.exercises) ? session.exercises : [];
-      return `
-        <div style="padding:14px; border-radius:12px; background:var(--surface-1, #fff); border:1px solid var(--border); display:flex; flex-direction:column; gap:8px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-            <div>
-              <div class="field-label">${repairText(session.day || "Día")}</div>
-              <div style="font-weight:900; font-size:15px;">${repairText(session.focus || "Sesión")}</div>
+  const renderLogs = (logs) =>
+    logs.length
+      ? `<ul class="list" style="margin:0;">${logs.map((log) => `
+          <li class="row" style="align-items:flex-start; justify-content:space-between; gap:12px;">
+            <div style="flex:1; min-width:0;">
+              <div style="font-weight:1000;">${repairText(log.title || "Entrenamiento")}</div>
+              <div class="dim">${formatLogDate(log.date || log.createdAt)}</div>
+              ${log.notes ? `<div class="dim" style="margin-top:4px;">${repairText(log.notes)}</div>` : ""}
+              ${log.description ? `<div class="dim" style="margin-top:4px;">${repairText(log.description)}</div>` : ""}
             </div>
-            ${session.duration_min ? `<span class="badge green">${session.duration_min} min</span>` : ""}
-          </div>
-          ${exercises.length ? `
-            <ul style="margin:0; padding-left:18px; display:flex; flex-direction:column; gap:4px;">
-              ${exercises.map(ex => `<li class="dim" style="font-size:13px;">${repairText(ex)}</li>`).join("")}
-            </ul>` : ""}
+            ${log.duration_min ? `<span class="badge">${log.duration_min} min</span>` : ""}
+          </li>`).join("")}</ul>`
+      : `<div class="empty-state">
+          <p class="empty-title">Sin entrenamientos registrados</p>
+          <p class="empty-sub">Guarda una idea rápida o regístralo manualmente.</p>
         </div>`;
-    }).join("");
-
-    return `
-      <div style="display:flex; flex-direction:column; gap:12px;">
-        <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
-          ${level ? `<span class="badge">${level}</span>` : ""}
-          ${goal ? `<span class="badge blue">${goal}</span>` : ""}
-          ${savedAt ? `<span class="dim" style="font-size:12px;">Guardado: ${fmtDate(savedAt)}</span>` : ""}
-        </div>
-        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:10px;">
-          ${dayCards || "<p class='sub'>Sin sesiones en este plan.</p>"}
-        </div>
-        ${notes ? `<p class="sub" style="margin:0; padding:12px; background:rgba(40,205,180,.08); border-radius:8px; border-left:3px solid rgba(40,205,180,.6);">💡 ${notes}</p>` : ""}
-        <a class="btn btn-ghost" href="#/member-ia" style="align-self:flex-start;">Actualizar plan IA -></a>
-      </div>`;
-  };
 
   const skeletonRow = `
     <li class="row">
@@ -122,93 +95,141 @@ export async function MyReservationsPage() {
       </div>
     </li>`;
 
-  // ── Devolvemos el HTML del esqueleto INMEDIATAMENTE ──
   setTimeout(() => {
-    authService.loadSession()
-      .then((freshMe) => {
-        if (!freshMe) return;
-      })
-      .catch(() => {});
+    authService.loadSession().catch(() => {});
 
-    const upcomingEl  = document.querySelector("#reservas-upcoming");
-    const pastEl      = document.querySelector("#reservas-past");
-    const planEl      = document.querySelector("#reservas-plan");
+    const upcomingEl = document.querySelector("#reservas-upcoming");
+    const pastEl     = document.querySelector("#reservas-past");
+    const logListEl  = document.querySelector("#reservas-log-list");
+    const logCountEl = document.querySelector("#reservas-log-count");
+    const logMoreBtn = document.querySelector("#reservas-log-more");
+    const logFormEl  = document.querySelector("#reservas-log-form");
+    const logStatusEl = document.querySelector("#reservas-log-status");
 
-    const loadData = async () => {
+    let currentLogPage = 1;
+    let currentLogTotalPages = 1;
+    let currentLogTotal = 0;
+    let currentLogs = [];
+
+    const setLogStatus = (txt, isError = false) => {
+      if (!logStatusEl) return;
+      logStatusEl.textContent = txt;
+      logStatusEl.style.color = isError ? "#b42318" : "var(--muted)";
+    };
+
+    const paintLogs = () => {
+      if (logListEl)  logListEl.innerHTML = renderLogs(currentLogs);
+      if (logCountEl) logCountEl.textContent = `${currentLogs.length}/${currentLogTotal} entrenamientos`;
+      if (logMoreBtn) {
+        const hasMore = currentLogPage < currentLogTotalPages;
+        logMoreBtn.style.display = hasMore ? "inline-flex" : "none";
+        logMoreBtn.disabled = false;
+        logMoreBtn.textContent = "Cargar más";
+      }
+    };
+
+    const loadLogs = async ({ page = 1, append = false } = {}) => {
       try {
-        const [reservations, savedPlan] = await Promise.all([
-          gymService.listMyReservations().catch(() => []),
-          trainingService.getSavedRecommendation().catch(() => null),
-        ]);
+        const res = await trainingService.getMyLogs(page, 10);
+        const logs = res?.logs || [];
+        const pagination = res?.pagination || {};
+        currentLogPage = Number(pagination.page || page);
+        currentLogTotalPages = Number(pagination.totalPages || 1);
+        currentLogTotal = Number(pagination.total || logs.length);
+        currentLogs = append ? currentLogs.concat(logs) : logs;
+        paintLogs();
+        setLogStatus(`Mostrando ${currentLogs.length} de ${currentLogTotal} entrenamientos.`);
+      } catch (err) {
+        setLogStatus(err.message || "No se pudo cargar el historial.", true);
+      }
+    };
 
-        const active = reservations.filter(
-          (r) => String(r.status).toLowerCase() !== "cancelled"
-        );
+    const loadReservations = async () => {
+      try {
+        const reservations = await gymService.listMyReservations().catch(() => []);
+        const active = reservations.filter((r) => String(r.status).toLowerCase() !== "cancelled");
         const now = new Date();
-        const upcoming = [];
-        const past = [];
+        const upcoming = [], past = [];
         for (const r of active) {
-          const start = new Date(r.starts_at || r.starts_at_ts || r.created_at);
-          (start >= now ? upcoming : past).push(r);
+          (new Date(r.starts_at || r.created_at) >= now ? upcoming : past).push(r);
         }
-
         if (upcomingEl) upcomingEl.innerHTML = renderList(upcoming, true);
         if (pastEl)     pastEl.innerHTML     = renderList(past, false);
-        if (planEl)     planEl.innerHTML     = renderSavedPlan(savedPlan);
 
-        // ── Cancelar reserva desde esta página ──
         upcomingEl?.addEventListener("click", async (e) => {
           const btn = e.target.closest("[data-action='cancel-reservation']");
           if (!btn) return;
-
           const classId = Number(btn.dataset.classId);
           if (!confirm("¿Seguro que quieres cancelar esta reserva?")) return;
-
           btn.disabled = true;
           btn.textContent = "Cancelando...";
-
           try {
             await gymService.cancelReservation(classId);
-            await loadData();
+            await loadReservations();
           } catch (err) {
             btn.disabled = false;
             btn.textContent = "Cancelar";
             alert(err.message || "No se pudo cancelar la reserva.");
           }
         });
-      } catch (err) {
-        console.error("Error cargando reservas:", err);
+      } catch {
         if (upcomingEl) upcomingEl.innerHTML = "<li class='row'><span>Error al cargar.</span></li>";
         if (pastEl)     pastEl.innerHTML     = "<li class='row'><span>Error al cargar.</span></li>";
       }
     };
 
-    const refreshSavedPlan = async () => {
-      if (!planEl) return;
-      const savedPlan = await trainingService.getSavedRecommendation().catch(() => null);
-      planEl.innerHTML = renderSavedPlan(savedPlan);
-    };
+    // Formulario para registrar entrenamiento manual
+    const logTitleEl    = document.querySelector("#reservas-log-title");
+    const logDateEl     = document.querySelector("#reservas-log-date");
+    const logDurationEl = document.querySelector("#reservas-log-duration");
+    const logNotesEl    = document.querySelector("#reservas-log-notes");
+    const logSaveBtn    = document.querySelector("#reservas-log-save");
 
-    const onPlanSaved = () => {
-      refreshSavedPlan();
-    };
+    if (logDateEl && !logDateEl.value) {
+      logDateEl.value = toLocalDateTimeValue(new Date());
+    }
 
-    const onStorage = (event) => {
-      if (event.key === "smartgym_saved_recommendation_updated_at") {
-        refreshSavedPlan();
+    logFormEl?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const title = String(logTitleEl?.value || "").trim();
+      if (!title) { setLogStatus("El título es obligatorio.", true); return; }
+
+      const payload = { title };
+      const rawDate = String(logDateEl?.value || "").trim();
+      if (rawDate) {
+        const parsed = new Date(rawDate);
+        if (!Number.isNaN(parsed.getTime())) payload.date = parsed.toISOString();
       }
-    };
+      const dur = Number(logDurationEl?.value || 0);
+      if (Number.isFinite(dur) && dur > 0) payload.duration_min = Math.round(dur);
+      const notes = String(logNotesEl?.value || "").trim();
+      if (notes) payload.notes = notes;
 
-    window.addEventListener("smartgym:recommendation-saved", onPlanSaved);
-    window.addEventListener("storage", onStorage);
+      if (logSaveBtn) { logSaveBtn.disabled = true; logSaveBtn.textContent = "Guardando..."; }
+      setLogStatus("Registrando...");
+      try {
+        await trainingService.createLog(payload);
+        logFormEl.reset();
+        if (logDateEl) logDateEl.value = toLocalDateTimeValue(new Date());
+        await loadLogs({ page: 1 });
+        showToast("Entrenamiento registrado.", "success");
+      } catch (err) {
+        setLogStatus(err.message || "No se pudo registrar.", true);
+        showToast(err.message || "Error al registrar.", "error");
+      } finally {
+        if (logSaveBtn) { logSaveBtn.disabled = false; logSaveBtn.textContent = "Registrar"; }
+      }
+    });
 
-    const cleanup = () => {
-      window.removeEventListener("smartgym:recommendation-saved", onPlanSaved);
-      window.removeEventListener("storage", onStorage);
-    };
+    logMoreBtn?.addEventListener("click", async () => {
+      if (currentLogPage >= currentLogTotalPages) return;
+      logMoreBtn.disabled = true;
+      logMoreBtn.textContent = "Cargando...";
+      await loadLogs({ page: currentLogPage + 1, append: true });
+    });
 
-    window.addEventListener("hashchange", cleanup, { once: true });
-    loadData();
+    loadReservations();
+    loadLogs({ page: 1 });
   }, 0);
 
   return `
@@ -218,32 +239,58 @@ export async function MyReservationsPage() {
         <section class="hero">
           <div class="card" style="display:flex; flex-direction:column; gap:16px;">
             <div class="kicker">MIS RESERVAS</div>
-            <h2 class="h2">Tus reservas realizadas</h2>
-            <p class="sub">Tus próximas clases, tu histórico y tu plan de entrenamiento guardado.</p>
+            <h2 class="h2">Hola, ${displayName}</h2>
+            <p class="sub">Tus próximas clases, historial de reservas y entrenamientos.</p>
 
-            <div class="card" style="background: var(--surface-2); border-color: var(--border); box-shadow:none;">
+            <div class="card" style="background:var(--surface-2); border-color:var(--border); box-shadow:none;">
               <div class="kicker">Próximas</div>
               <ul class="list" style="margin-top:8px;" id="reservas-upcoming">
                 ${skeletonRow}${skeletonRow}
               </ul>
             </div>
 
-            <div class="card" style="background: var(--surface-2); border-color: var(--border); box-shadow:none;">
+            <div class="card" style="background:var(--surface-2); border-color:var(--border); box-shadow:none;">
               <div class="kicker">Anteriores</div>
               <ul class="list" style="margin-top:8px;" id="reservas-past">
                 ${skeletonRow}${skeletonRow}
               </ul>
             </div>
 
-            <div class="card" style="background: var(--surface-2); border-color: var(--border); box-shadow:none;">
-              <div style="margin-bottom:12px;">
-                <div class="kicker">Plan de entrenamiento IA</div>
-                <div class="dim" style="font-size:13px;">Tu último plan guardado desde la pestaña Entrenamientos y Dieta</div>
-              </div>
-              <div id="reservas-plan">
-                <div style="padding:20px; text-align:center; color:var(--muted);">
-                  <div style="height:12px; width:180px; border-radius:6px; background:var(--border); animation:pulse 1.4s infinite; margin:0 auto;"></div>
+            <div class="card" style="background:var(--surface-2); border-color:var(--border); box-shadow:none; display:flex; flex-direction:column; gap:14px;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+                <div>
+                  <div class="kicker">Historial de entrenamientos</div>
+                  <div class="dim" id="reservas-log-status">Cargando...</div>
                 </div>
+                <div class="dim" id="reservas-log-count"></div>
+              </div>
+
+              <form id="reservas-log-form" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; align-items:end;">
+                <label style="display:flex; flex-direction:column; gap:6px;">
+                  <span class="field-label">Entrenamiento</span>
+                  <input id="reservas-log-title" type="text" required maxlength="120" placeholder="Ej: Fuerza tren superior" />
+                </label>
+                <label style="display:flex; flex-direction:column; gap:6px;">
+                  <span class="field-label">Fecha y hora</span>
+                  <input id="reservas-log-date" type="datetime-local" />
+                </label>
+                <label style="display:flex; flex-direction:column; gap:6px;">
+                  <span class="field-label">Duración (min)</span>
+                  <input id="reservas-log-duration" type="number" min="1" max="480" step="1" placeholder="45" />
+                </label>
+                <label style="display:flex; flex-direction:column; gap:6px; grid-column:1/-1;">
+                  <span class="field-label">Notas (opcional)</span>
+                  <textarea id="reservas-log-notes" rows="2" maxlength="400" placeholder="Sensaciones, carga usada, etc."></textarea>
+                </label>
+                <div style="display:flex; justify-content:flex-end; grid-column:1/-1;">
+                  <button class="btn btn-primary" id="reservas-log-save" type="submit">Registrar</button>
+                </div>
+              </form>
+
+              <div id="reservas-log-list">${skeletonRow}</div>
+
+              <div style="display:flex; justify-content:center;">
+                <button class="btn btn-ghost" id="reservas-log-more" type="button" style="display:none;">Cargar más</button>
               </div>
             </div>
 

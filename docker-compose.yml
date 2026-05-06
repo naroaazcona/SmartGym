@@ -66,6 +66,7 @@ services:
       STRIPE_PRICE_PREMIUM: ${STRIPE_PRICE_PREMIUM:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
 
   gym-service:
     build: ./gym-service
