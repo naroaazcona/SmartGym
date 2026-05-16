@@ -53,6 +53,12 @@ const EQUIPMENT_OPTIONS = [
   { value: "bicicleta", label: "Bicicleta / Cinta" },
 ];
 
+const EXPERIENCE_LEVEL_OPTIONS = [
+  { value: "beginner", label: "Principiante" },
+  { value: "intermediate", label: "Intermedio" },
+  { value: "advanced", label: "Avanzado" },
+];
+
 const renderRecommendationClassCard = (item) => {
   const chips = item.exercises.length
     ? `<div class="chip-row" style="margin-top:8px;">${item.exercises
@@ -296,6 +302,9 @@ export async function MemberAiDashboard() {
   const initialGoalOptions = GOAL_OPTIONS.map(
     (opt) => `<option value="${opt.value}" ${opt.value === initialPreferences.goal ? "selected" : ""}>${escapeHtml(opt.label)}</option>`
   ).join("");
+  const initialLevelOptions = EXPERIENCE_LEVEL_OPTIONS.map(
+    (opt) => `<option value="${opt.value}" ${opt.value === (initialPreferences.experience_level || "beginner") ? "selected" : ""}>${escapeHtml(opt.label)}</option>`
+  ).join("");
   const initialPreferredTrainingCheckboxes = renderPreferenceCheckboxes(
     "member-pref-training",
     PREFERRED_TRAINING_OPTIONS,
@@ -336,6 +345,9 @@ export async function MemberAiDashboard() {
     showTab("rec");
 
     const prefGoalEl = document.querySelector("#member-pref-goal");
+    const prefLevelEl = document.querySelector("#member-pref-level");
+    const prefDaysEl = document.querySelector("#member-pref-days");
+    const prefDaysLabelEl = document.querySelector("#member-pref-days-label");
     const prefStatusEl = document.querySelector("#member-pref-status");
     const prefSaveBtn = document.querySelector("#member-pref-save");
     const prefReloadBtn = document.querySelector("#member-pref-reload");
@@ -504,6 +516,12 @@ export async function MemberAiDashboard() {
 
     const applyPreferencesToForm = (prefs) => {
       if (prefGoalEl) prefGoalEl.value = prefs.goal;
+      if (prefLevelEl) prefLevelEl.value = prefs.experience_level || "beginner";
+      if (prefDaysEl) {
+        const days = String(Number(prefs.days_per_week || 3));
+        prefDaysEl.value = days;
+        if (prefDaysLabelEl) prefDaysLabelEl.textContent = days;
+      }
 
       const setChecked = (name, values) => {
         const selected = new Set(Array.isArray(values) ? values : []);
@@ -529,6 +547,9 @@ export async function MemberAiDashboard() {
 
     const collectPreferencePayload = () => {
       const goal = prefGoalEl?.value || currentPreferences.goal || "mejorar_condicion_fisica";
+      const experienceLevel = prefLevelEl?.value || currentPreferences.experience_level || "beginner";
+      const daysRaw = Number(prefDaysEl?.value || currentPreferences.days_per_week || 3);
+      const days = Number.isFinite(daysRaw) && daysRaw > 0 ? Math.round(daysRaw) : 3;
       const preferredTraining = readCheckedValues("member-pref-training");
       const injuries = normalizeInjurySelection(readCheckedValues("member-pref-injuries"));
       const availableEquipment = readCheckedValues("member-pref-equipment");
@@ -536,6 +557,8 @@ export async function MemberAiDashboard() {
       return {
         ...currentPreferences,
         goal,
+        experience_level: experienceLevel,
+        days_per_week: days,
         preferred_training: preferredTraining,
         injuries: injuries.join(", "),
         available_equipment: availableEquipment,
@@ -748,6 +771,10 @@ export async function MemberAiDashboard() {
       }
     };
 
+    prefDaysEl?.addEventListener("input", () => {
+      if (prefDaysLabelEl) prefDaysLabelEl.textContent = prefDaysEl.value;
+    });
+
     recRefreshBtn?.addEventListener("click", () => loadRecommendations());
     recSaveBtn?.addEventListener("click", () => saveRecommendation());
     prefSaveBtn?.addEventListener("click", () => savePreferences());
@@ -830,6 +857,7 @@ export async function MemberAiDashboard() {
                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
                   <button class="btn btn-primary" id="member-rec-save" type="button">Guardar plan</button>
                   <button class="btn btn-ghost" id="member-rec-refresh" type="button">Actualizar recomendación</button>
+                  <button class="btn btn-ghost" type="button" data-ia-tab="pref">Editar preferencias</button>
                 </div>
               </div>
 
@@ -880,6 +908,17 @@ export async function MemberAiDashboard() {
                 <label class="member-pref-field" style="display:flex; flex-direction:column; gap:6px;">
                   <span class="field-label">Objetivo</span>
                   <select id="member-pref-goal">${initialGoalOptions}</select>
+                </label>
+
+                <label class="member-pref-field" style="display:flex; flex-direction:column; gap:6px;">
+                  <span class="field-label">Nivel de experiencia</span>
+                  <select id="member-pref-level">${initialLevelOptions}</select>
+                </label>
+
+                <label class="member-pref-field" style="display:flex; flex-direction:column; gap:6px;">
+                  <span class="field-label">Días de entrenamiento por semana: <strong id="member-pref-days-label">${initialDays}</strong></span>
+                  <input type="range" id="member-pref-days" min="2" max="7" step="1" value="${initialDays}" style="cursor:pointer;" />
+                  <div style="display:flex; justify-content:space-between; font-size:12px;" class="dim"><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span></div>
                 </label>
 
                 <div class="member-pref-section" style="display:flex; flex-direction:column; gap:8px;">

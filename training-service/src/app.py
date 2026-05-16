@@ -545,15 +545,33 @@ HISTORIAL RECIENTE:
 REGLAS IMPORTANTES:
 - Adapta el plan al nivel del usuario.
 - Si es principiante, evita planteamientos demasiado avanzados.
-- Si tiene lesiones o limitaciones, evita ejercicios problemÃ¡ticos.
+- Si tiene lesiones o limitaciones, evita ejercicios problematicos.
 - Ten en cuenta el historial reciente para ajustar volumen y variedad.
 - El plan debe ser realista.
-- Usa ejercicios especÃ­ficos.
-- Incluye series y repeticiones dentro del texto del ejercicio.
-- El plan debe estar en espaÃ±ol.
-- No des consejos mÃ©dicos.
+- Usa ejercicios especificos.
+- Incluye series y repeticiones dentro del texto del ejercicio (ej: Peso muerto 4x6, Hip thrust 3x12).
+- El plan debe estar en espanol.
+- No des consejos medicos.
 - Recomienda entre 2 y 4 tipos de clases compatibles con el perfil del usuario.
-- AÃ±ade tambiÃ©n 3 consejos bÃ¡sicos de alimentaciÃ³n alineados con el objetivo.
+- Anade tambien 3 consejos basicos de alimentacion alineados con el objetivo.
+
+REGLAS DE VARIEDAD (MUY IMPORTANTES - APLICA SIEMPRE):
+- NUNCA repitas el mismo ejercicio en dias distintos del mismo plan.
+- Incluye ENTRE 5 Y 7 ejercicios por sesion, sin excepcion. Nunca menos de 5.
+- Si hay historial reciente, elige ejercicios DIFERENTES a los del historial para dar variedad real.
+- Alterna ejercicios compuestos (multiarticulares) con ejercicios de aislamiento en cada sesion.
+- Varia los grupos musculares de un dia a otro para evitar sobrecargas.
+- Ajusta el rango de series y repeticiones segun el objetivo:
+  * Ganar musculo o fuerza: combina 4x5-6 (fuerza) y 3x10-12 (hipertrofia)
+  * Perder peso o mejorar resistencia: 3x15-20 con descansos cortos (30-60s)
+  * Mantenerse o condicion fisica general: 3x10-15 variado
+  * Reducir estres o yoga/pilates: circuitos suaves, posturas, flujos
+- Se creativo en la seleccion de ejercicios. Evita siempre usar los mismos basicos.
+  Ejemplos de variedad: split squat bulgaro, Nordic curl, pallof press, farmers walk,
+  face pulls, sumo peso muerto, landmine press, TRX rows, hip thrust con barra,
+  press declinado, remo en polea baja, curl con barra EZ, extension de triceps en polea, etc.
+- Incluye siempre 2-3 ejercicios de calentamiento dinamico al inicio y 1-2 estiramientos al final de cada sesion.
+- Cada sesion debe tener un foco muscular claro y diferenciado de las demas sesiones del plan.
 
 FORMATO JSON OBLIGATORIO:
 {{
@@ -600,8 +618,8 @@ FORMATO JSON OBLIGATORIO:
                 }
             ],
             response_format={"type": "json_object"},
-            max_tokens=1800,
-            temperature=0.7,
+            max_tokens=2500,
+            temperature=0.9,
         )
 
         content = response.choices[0].message.content
