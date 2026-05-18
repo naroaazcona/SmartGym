@@ -3,6 +3,7 @@ import { authStore } from "../state/authStore.js";
 import { authService } from "../services/authService.js";
 import { navigate, showToast } from "../router.js";
 import { trainingService } from "../services/trainingService.js";
+import { escapeHtml } from "./memberHelpers.js";
 
 const quickPlans = [
   {
@@ -104,14 +105,6 @@ const quickPlans = [
     ],
   },
 ];
-
-const escapeHtml = (value) =>
-  String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 
 const renderPlanCard = (plan, isMember) => `
   <article class="card quick-idea-card" id="plan-${plan.id}" style="display:flex; flex-direction:column; gap:14px;">

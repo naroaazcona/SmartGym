@@ -522,16 +522,16 @@ def create_app():
         prompt = f"""
 Eres un entrenador personal experto de SmartGym.
 
-Tu tarea es generar una recomendaciÃ³n deportiva PERSONALIZADA para un usuario.
-Debes devolver SOLO JSON vÃ¡lido.
-No aÃ±adas explicaciones fuera del JSON.
+Tu tarea es generar una recomendación deportiva PERSONALIZADA para un usuario.
+Debes devolver SOLO JSON válido.
+No añadas explicaciones fuera del JSON.
 
 DATOS DEL USUARIO:
 - Nivel: {profile.get('experience_level', 'beginner')}
-- Objetivo: {profile.get('goal', 'mejorar condiciÃ³n fÃ­sica')}
-- DÃ­as por semana: {profile.get('days_per_week', 3)}
+- Objetivo: {profile.get('goal', 'mejorar condición física')}
+- Días por semana: {profile.get('days_per_week', 3)}
 - Lesiones o limitaciones: {injuries}
-- GÃ©nero: {profile.get('gender', 'no especificado')}
+- Género: {profile.get('gender', 'no especificado')}
 - Peso: {profile.get('weight_kg', 'no especificado')}
 - Altura: {profile.get('height_cm', 'no especificado')}
 
@@ -601,7 +601,7 @@ FORMATO JSON OBLIGATORIO:
       "detail": "Texto breve"
     }}
   ],
-  "notes": "Consejo final Ãºtil y personalizado"
+  "notes": "Consejo final útil y personalizado"
 }}
 """
 
@@ -610,7 +610,7 @@ FORMATO JSON OBLIGATORIO:
             messages=[
                 {
                     "role": "system",
-                    "content": "Responde exclusivamente con JSON vÃ¡lido y consistente."
+                    "content": "Responde exclusivamente con JSON válido y consistente."
                 },
                 {
                     "role": "user",
@@ -657,23 +657,23 @@ FORMATO JSON OBLIGATORIO:
         if "perder" in goal_text or "grasa" in goal_text:
             recommended_class_types = ["Spinning", "HIIT", "Zumba", "Funcional"]
             diet_tips = [
-                {"title": "Prioriza proteÃ­na", "detail": "Incluye proteÃ­na magra en cada comida para mejorar saciedad."},
+                {"title": "Prioriza proteína", "detail": "Incluye proteína magra en cada comida para mejorar saciedad."},
                 {"title": "Controla ultraprocesados", "detail": "Reduce snacks y bebidas azucaradas."},
-                {"title": "DÃ©ficit moderado", "detail": "Busca constancia antes que restricciones extremas."},
+                {"title": "Déficit moderado", "detail": "Busca constancia antes que restricciones extremas."},
             ]
         elif "musculo" in goal_text or "masa" in goal_text or "fuerza" in goal_text:
             recommended_class_types = ["Body Pump", "Fuerza", "Cross Training", "Funcional"]
             diet_tips = [
-                {"title": "ProteÃ­na suficiente", "detail": "Reparte proteÃ­na durante el dÃ­a."},
-                {"title": "Carbohidrato Ãºtil", "detail": "Incluye carbohidratos alrededor del entrenamiento."},
-                {"title": "SuperÃ¡vit controlado", "detail": "Aumenta calorÃ­as de forma progresiva si buscas ganar masa."},
+                {"title": "Proteína suficiente", "detail": "Reparte proteína durante el día."},
+                {"title": "Carbohidrato útil", "detail": "Incluye carbohidratos alrededor del entrenamiento."},
+                {"title": "Superávit controlado", "detail": "Aumenta calorías de forma progresiva si buscas ganar masa."},
             ]
         else:
             recommended_class_types = ["Pilates", "Funcional", "Body Balance", "Cardio"]
             diet_tips = [
-                {"title": "Comidas equilibradas", "detail": "Combina proteÃ­na, carbohidrato complejo y verduras."},
-                {"title": "HidrataciÃ³n", "detail": "MantÃ©n una buena hidrataciÃ³n durante el dÃ­a."},
-                {"title": "Rutina sostenible", "detail": "Elige hÃ¡bitos que puedas mantener a largo plazo."},
+                {"title": "Comidas equilibradas", "detail": "Combina proteína, carbohidrato complejo y verduras."},
+                {"title": "Hidratación", "detail": "Mantén una buena hidratación durante el día."},
+                {"title": "Rutina sostenible", "detail": "Elige hábitos que puedas mantener a largo plazo."},
             ]
 
         if level == "beginner":

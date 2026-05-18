@@ -3,6 +3,7 @@ import { authService } from "../services/authService.js";
 import { authStore } from "../state/authStore.js";
 import { navigate } from "../router.js";
 import { apiFetch } from "../api/client.js";
+import { normalizeEsPhone } from "./memberHelpers.js";
 
 const formatDateForInput = (value) => {
   if (!value) return "";
@@ -19,18 +20,6 @@ const getLocalPhoneDigits = (value) => {
   return local;
 };
 
-const normalizeEsPhone = (value) => {
-  const digits = String(value || "").replace(/[^\d]/g, "");
-  if (!digits) return "";
-
-  let local = digits;
-  if (local.startsWith("0034")) local = local.slice(4);
-  if (local.startsWith("34")) local = local.slice(2);
-  local = local.replace(/^0+/, "");
-
-  return local ? `+34 ${local}` : "+34";
-};
-
 const attachPhoneSanitizer = (input) => {
   if (!input) return;
   input.setAttribute("inputmode", "numeric");
@@ -44,13 +33,6 @@ const friendlyError = (ex, fallback) => {
   const msg = ex?.message || "";
   if (/network/i.test(msg)) return "No hay conexion con el servidor.";
   return msg || fallback;
-};
-
-const prettyRole = (role) => {
-  const r = String(role || "").toLowerCase();
-  if (r === "admin") return "Administrador";
-  if (r === "trainer") return "Entrenador";
-  return "Miembro";
 };
 
 const prettyGender = (g) => {

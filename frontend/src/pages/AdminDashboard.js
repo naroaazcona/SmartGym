@@ -16,7 +16,6 @@ export async function AdminDashboard() {
   }
 
   const name = me?.profile?.firstName || me?.name || me?.email || "Admin";
-  const isOnline = Boolean(authStore.token);
 
   let classTypes = [];
   let classTypesError = "";
@@ -27,17 +26,6 @@ export async function AdminDashboard() {
   }
   const classes = await gymService.listClasses().catch(() => []);
   const trainers = await authService.listByRole('trainer').catch(() => []);
-
-  const heroImages = {
-    crossfit: "https://images.unsplash.com/photo-1558611848-73f7eb4001a1?auto=format&fit=crop&w=1400&q=80",
-    hiit: "https://images.unsplash.com/photo-1554284126-aa88f22d8b74?auto=format&fit=crop&w=1400&q=80",
-    mobility: "https://images.unsplash.com/photo-1546484959-f9a9c6c4b4c1?auto=format&fit=crop&w=1400&q=80",
-    spinning: "https://images.unsplash.com/photo-1546484475-7e0b1cd5a33e?auto=format&fit=crop&w=1400&q=80",
-    cycling: "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?auto=format&fit=crop&w=1400&q=80",
-    strength: "https://images.unsplash.com/photo-1483721310020-03333e577078?auto=format&fit=crop&w=1400&q=80",
-  };
-
-  const imgForType = (type) => heroImages[String(type || "").toLowerCase()] || heroImages.strength;
 
   const fmtDate = (iso) =>
     new Date(iso).toLocaleString("es-ES", {

@@ -75,19 +75,6 @@ export function showToast(msg, type = "info", duration = 3500) {
   }, duration);
 }
 
-/* ── Skeleton helpers (exportado para usar en páginas) ── */
-export function skeletonCards(count = 3) {
-  return Array.from({ length: count }, () => `
-    <div class="skeleton-card">
-      <div class="skeleton skeleton-thumb"></div>
-      <div class="skeleton skeleton-badge"></div>
-      <div class="skeleton skeleton-line med"></div>
-      <div class="skeleton skeleton-line short"></div>
-      <div class="skeleton skeleton-line full"></div>
-    </div>
-  `).join("");
-}
-
 export async function renderRoute() {
   const app = document.querySelector("#app");
   if (!app) return;

@@ -3,14 +3,7 @@ import { authStore } from "../state/authStore.js";
 import { authService } from "../services/authService.js";
 import { navigate } from "../router.js";
 import { trainingService } from "../services/trainingService.js";
-
-const escapeHtml = (value) =>
-  String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+import { escapeHtml } from "./memberHelpers.js";
 
 const formatDate = (value) => {
   if (!value) return "Sin fecha";

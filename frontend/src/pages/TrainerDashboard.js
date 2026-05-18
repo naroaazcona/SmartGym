@@ -3,7 +3,7 @@ import { authStore } from "../state/authStore.js";
 import { authService } from "../services/authService.js";
 import { navigate } from "../router.js";
 import { gymService } from "../services/gymService.js";
-
+import { escapeHtml } from "./memberHelpers.js";
 
 export async function TrainerDashboard() {
   const me = await authService.loadSession().catch(() => authStore.me);
@@ -18,16 +18,6 @@ export async function TrainerDashboard() {
 
   const name = me?.profile?.firstName || me?.name || me?.email || "Entrenador";
   const trainerTitle = name === "Entrenador" ? "Panel de entrenador" : `Panel de ${name}`;
-
-  const heroImages = {
-    crossfit: "https://images.unsplash.com/photo-1558611848-73f7eb4001a1?auto=format&fit=crop&w=1400&q=80",
-    hiit: "https://images.unsplash.com/photo-1554284126-aa88f22d8b74?auto=format&fit=crop&w=1400&q=80",
-    mobility: "https://images.unsplash.com/photo-1546484959-f9a9c6c4b4c1?auto=format&fit=crop&w=1400&q=80",
-    spinning: "https://images.unsplash.com/photo-1546484475-7e0b1cd5a33e?auto=format&fit=crop&w=1400&q=80",
-    cycling: "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?auto=format&fit=crop&w=1400&q=80",
-    strength: "https://images.unsplash.com/photo-1483721310020-03333e577078?auto=format&fit=crop&w=1400&q=80",
-  };
-  const imgForType = (type) => heroImages[String(type || "").toLowerCase()] || heroImages.strength;
 
   const isMine = (cls) => Number(cls.trainer_user_id) === Number(me.id);
 
@@ -93,15 +83,6 @@ export async function TrainerDashboard() {
       hour: "2-digit",
       minute: "2-digit",
     });
-  const escapeHtml = (value) =>
-    String(value ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-
-
   const renderCard = (cls) => {
     const booked = Number(cls.booked_count || 0);
     const capacity = Number(cls.capacity || 0);

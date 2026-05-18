@@ -3,14 +3,7 @@ import { authStore } from "../state/authStore.js";
 import { authService } from "../services/authService.js";
 import { navigate } from "../router.js";
 import { gymService } from "../services/gymService.js";
-
-const esc = (value) =>
-  String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+import { escapeHtml as esc } from "./memberHelpers.js";
 
 const activeCount = (types = []) => types.filter((t) => t.is_active !== false).length;
 

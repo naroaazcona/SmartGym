@@ -1,3 +1,13 @@
+export const normalizeEsPhone = (value) => {
+  const digits = String(value || "").replace(/[^\d]/g, "");
+  if (!digits) return "";
+  let local = digits;
+  if (local.startsWith("0034")) local = local.slice(4);
+  if (local.startsWith("34")) local = local.slice(2);
+  local = local.replace(/^0+/, "");
+  return local ? `+34 ${local}` : "+34";
+};
+
 export const escapeHtml = (value) =>
   String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -230,15 +240,25 @@ export const formatRecommendationMeta = (doc, cached) => {
     .join(" | ");
 };
 
-export const toRecommendedTypeSet = (recommendationState) =>
-  new Set(
-    (recommendationState?.classes || [])
-      .map((item) => normalizeText(item?.classType))
-      .filter(Boolean)
-  );
+export const toLocalDateTimeValue = (date) => {
+  const d = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(d.getTime())) return "";
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
+};
 
-export const isClassRecommended = (cls, recommendedTypeSet) =>
-  recommendedTypeSet.has(normalizeText(cls?.class_type_name || cls?.type || ""));
+export const formatLogDate = (value) => {
+  if (!value) return "Fecha sin registrar";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "Fecha inválida";
+  return parsed.toLocaleString("es-ES", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
 
 export const getDemandMeta = (occupancy = 0) => {
   if (occupancy >= 85) {

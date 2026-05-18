@@ -3,6 +3,7 @@ import { authService } from "../services/authService.js";
 import { authStore } from "../state/authStore.js";
 import { navigate } from "../router.js";
 import { CONFIG } from "../config.js";
+import { normalizeEsPhone } from "./memberHelpers.js";
 
 const ALLOWED_EMAIL_PROVIDERS = ["gmail", "outlook", "yahoo"];
 
@@ -11,18 +12,6 @@ const isAllowedRegisterEmail = (email) => {
   if (!domain) return false;
   const provider = domain.split(".")[0];
   return ALLOWED_EMAIL_PROVIDERS.includes(provider);
-};
-
-const normalizeEsPhone = (value) => {
-  const digits = String(value || "").replace(/[^\d]/g, "");
-  if (!digits) return "";
-
-  let local = digits;
-  if (local.startsWith("0034")) local = local.slice(4);
-  if (local.startsWith("34")) local = local.slice(2);
-  local = local.replace(/^0+/, "");
-
-  return local ? `+34 ${local}` : "+34";
 };
 
 const attachPhoneSanitizer = (input) => {

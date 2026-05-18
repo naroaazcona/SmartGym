@@ -4,24 +4,7 @@ import { authService } from "../services/authService.js";
 import { navigate, showToast } from "../router.js";
 import { gymService } from "../services/gymService.js";
 import { trainingService } from "../services/trainingService.js";
-import { repairText } from "./memberHelpers.js";
-
-const toLocalDateTimeValue = (date) => {
-  const d = date instanceof Date ? date : new Date(date);
-  if (Number.isNaN(d.getTime())) return "";
-  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
-  return local.toISOString().slice(0, 16);
-};
-
-const formatLogDate = (value) => {
-  if (!value) return "Fecha sin registrar";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "Fecha inválida";
-  return parsed.toLocaleString("es-ES", {
-    day: "2-digit", month: "short", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
-  });
-};
+import { formatLogDate, repairText, toLocalDateTimeValue } from "./memberHelpers.js";
 
 export async function MyReservationsPage() {
   if (!authStore.token) {

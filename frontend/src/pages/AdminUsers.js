@@ -2,14 +2,7 @@ import { Navbar } from "../components/Navbar.js";
 import { authStore } from "../state/authStore.js";
 import { authService } from "../services/authService.js";
 import { navigate } from "../router.js";
-
-const esc = (value) =>
-  String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+import { escapeHtml as esc } from "./memberHelpers.js";
 
 const fullName = (user) => {
   const first = String(user?.first_name || user?.firstName || "").trim();
