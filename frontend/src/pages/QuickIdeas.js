@@ -11,6 +11,7 @@ const quickPlans = [
     title: "Fullbody 3x/sem",
     focus: "Fuerza + core",
     time: "45-55 min",
+    img: "https://images.unsplash.com/photo-1558611848-73f7eb4001a1?auto=format&fit=crop&w=1400&q=80",
     durationMin: 50,
     tip: "Base: sentadilla, press, remo.",
     description: "Sesión completa que trabaja todo el cuerpo. Ideal para 3 días no consecutivos a la semana. Combina fuerza compuesta con trabajo de core para máximo rendimiento.",
@@ -28,6 +29,7 @@ const quickPlans = [
     title: "HIIT + movilidad",
     focus: "Cardio + stretch",
     time: "30 min",
+    img: "https://images.unsplash.com/photo-1554284126-aa88f22d8b74?auto=format&fit=crop&w=1400&q=80",
     durationMin: 30,
     tip: "4 bloques 40/20 + 10' movilidad.",
     description: "Alta intensidad seguida de movilidad activa. Quema calorías y mejora tu rango de movimiento en una sola sesión. Perfecto para días de poco tiempo.",
@@ -44,6 +46,7 @@ const quickPlans = [
     title: "Torso potente",
     focus: "Pecho + espalda",
     time: "40-50 min",
+    img: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1400&q=80",
     durationMin: 45,
     tip: "Superseries de empuje y tracción.",
     description: "Superseries que alternan empuje y tracción para máximo volumen y eficiencia. Trabaja pecho, espalda y hombros con poco descanso entre grupos musculares.",
@@ -59,6 +62,7 @@ const quickPlans = [
     title: "Pierna y glúteo",
     focus: "Lower body",
     time: "50 min",
+    img: "https://images.unsplash.com/photo-1579758629938-03607ccdbaba?auto=format&fit=crop&w=1400&q=80",
     durationMin: 50,
     tip: "Sentadilla, bisagra y zancadas pesadas.",
     description: "Sesión completa de tren inferior. Combina sentadilla profunda, bisagra de cadera y trabajo unilateral para desarrollar fuerza y masa muscular en piernas y glúteos.",
@@ -76,6 +80,7 @@ const quickPlans = [
     title: "Core + postura",
     focus: "Estabilidad",
     time: "25-30 min",
+    img: "https://images.unsplash.com/photo-1546484959-f9a9c6c4b4c1?auto=format&fit=crop&w=1400&q=80",
     durationMin: 28,
     tip: "Plancha, antirotación y control lumbo-pélvico.",
     description: "Trabajo profundo de core orientado a mejorar postura y prevenir lesiones. Sin carga pesada, enfocado en activación y control motor. Ideal como complemento o días de recuperación.",
@@ -93,6 +98,7 @@ const quickPlans = [
     title: "Metcon express",
     focus: "Quema calórica",
     time: "20-25 min",
+    img: "https://images.unsplash.com/photo-1546484475-7e0b1cd5a33e?auto=format&fit=crop&w=1400&q=80",
     durationMin: 22,
     tip: "Circuito rápido con kettlebell y remo.",
     description: "Circuito de alta intensidad que maximiza la quema calórica en poco tiempo. Perfecto cuando no tienes mucho tiempo pero quieres un entrenamiento efectivo y completo.",
@@ -107,34 +113,38 @@ const quickPlans = [
 ];
 
 const renderPlanCard = (plan, isMember) => `
-  <article class="card quick-idea-card" id="plan-${plan.id}" style="display:flex; flex-direction:column; gap:14px;">
-    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
-      <div>
-        <div style="font-weight:1000; font-size:20px; font-family:inherit;">${escapeHtml(plan.title)}</div>
-        <div class="dim" style="margin-top:4px;">${escapeHtml(plan.focus)} · ${escapeHtml(plan.time)}</div>
+  <article class="card quick-idea-card" id="plan-${plan.id}" style="display:flex; flex-direction:column; gap:14px; overflow:hidden; padding:0;">
+    <div class="plan-thumb" style="background-image:url('${escapeHtml(plan.img)}')"></div>
+
+    <div style="display:flex; flex-direction:column; gap:14px; padding:14px;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
+        <div>
+          <div style="font-weight:700; font-size:20px; font-family:inherit;">${escapeHtml(plan.title)}</div>
+          <div class="dim" style="margin-top:4px;">${escapeHtml(plan.focus)} · ${escapeHtml(plan.time)}</div>
+        </div>
+        <span class="badge">${escapeHtml(plan.time)}</span>
       </div>
-      <span class="badge">${escapeHtml(plan.time)}</span>
+
+      <p class="sub" style="margin:0;">${escapeHtml(plan.description)}</p>
+      <p class="dim" style="margin:0; font-weight:700; font-style:italic;">"${escapeHtml(plan.tip)}"</p>
+
+      <div>
+        <div style="font-weight:600; font-size:13px; margin-bottom:8px; color:var(--muted);">Ejercicios</div>
+        <ul class="list" style="gap:6px;">
+          ${plan.exercises.map((ex) => `
+            <li class="row" style="padding:10px 12px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+              <span style="font-weight:600;">${escapeHtml(ex.name)}</span>
+              <span class="pill">${ex.sets} series · ${escapeHtml(ex.detail)}</span>
+            </li>`).join("")}
+        </ul>
+      </div>
+
+      ${isMember ? `
+      <div style="display:flex; align-items:center; gap:10px; margin-top:auto; flex-wrap:wrap;">
+        <button class="btn btn-primary" data-action="save-plan" data-plan-id="${plan.id}">Guardar en mi historial</button>
+        <span class="dim" id="save-msg-${plan.id}" style="font-weight:700;"></span>
+      </div>` : ""}
     </div>
-
-    <p class="sub" style="margin:0;">${escapeHtml(plan.description)}</p>
-    <p class="dim" style="margin:0; font-weight:700; font-style:italic;">"${escapeHtml(plan.tip)}"</p>
-
-    <div>
-      <div style="font-weight:800; font-size:13px; margin-bottom:8px; color:var(--muted);">Ejercicios</div>
-      <ul class="list" style="gap:6px;">
-        ${plan.exercises.map((ex) => `
-          <li class="row" style="padding:10px 12px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
-            <span style="font-weight:800;">${escapeHtml(ex.name)}</span>
-            <span class="pill">${ex.sets} series · ${escapeHtml(ex.detail)}</span>
-          </li>`).join("")}
-      </ul>
-    </div>
-
-    ${isMember ? `
-    <div style="display:flex; align-items:center; gap:10px; margin-top:auto; flex-wrap:wrap;">
-      <button class="btn btn-primary" data-action="save-plan" data-plan-id="${plan.id}">Guardar en mi historial</button>
-      <span class="dim" id="save-msg-${plan.id}" style="font-weight:700;"></span>
-    </div>` : ""}
   </article>
 `;
 

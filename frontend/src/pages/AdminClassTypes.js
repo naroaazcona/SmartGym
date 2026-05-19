@@ -34,7 +34,7 @@ export async function AdminClassTypesPage() {
     const setMsg = (el, text, isError = false) => {
       if (!el) return;
       el.textContent = text;
-      el.style.color = isError ? "#fca5a5" : "#2be7c6";
+      el.style.color = isError ? "#ef4444" : "#10b981";
     };
 
     const render = () => {

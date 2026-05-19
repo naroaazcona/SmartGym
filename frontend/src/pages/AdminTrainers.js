@@ -107,7 +107,7 @@ export async function AdminTrainersPage() {
                   </div>
                 </div>
                 <div class="admin-trainer-badges">
-                  <span class="badge green">${trainerClasses.length} clases</span>
+                  <span class="badge">${trainerClasses.length} clases</span>
                   <span class="admin-mini-chip">${nextClass ? `Proxima: ${fmtDate(nextClass.starts_at)}` : "Sin proxima clase"}</span>
                 </div>
               </div>
@@ -121,7 +121,7 @@ export async function AdminTrainersPage() {
     const setStatus = (text, isError = false) => {
       if (!statusEl) return;
       statusEl.textContent = text;
-      statusEl.style.color = isError ? "#fca5a5" : "var(--muted)";
+      statusEl.style.color = isError ? "#ef4444" : "var(--muted)";
     };
 
     const refresh = async () => {

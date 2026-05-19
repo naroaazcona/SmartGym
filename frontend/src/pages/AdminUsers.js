@@ -74,7 +74,7 @@ export async function AdminUsersPage() {
     const setMsg = (text, isError = false) => {
       if (!editMsg) return;
       editMsg.textContent = text;
-      editMsg.style.color = isError ? "#fca5a5" : "#2be7c6";
+      editMsg.style.color = isError ? "#ef4444" : "#10b981";
     };
 
     const renderUsers = (filter = "") => {
@@ -132,7 +132,7 @@ export async function AdminUsersPage() {
       } catch (err) {
         if (statusEl) {
           statusEl.textContent = err.message || "No se pudieron cargar usuarios.";
-          statusEl.style.color = "#fca5a5";
+          statusEl.style.color = "#ef4444";
         }
       }
     };

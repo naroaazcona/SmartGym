@@ -26,7 +26,7 @@ export async function MyReservationsPage() {
       ? items.map((r) => `
           <li class="row" style="align-items:center; justify-content:space-between; gap:12px;">
             <div style="flex:1; min-width:0;">
-              <div style="font-weight:1000;">${repairText(r.class_type_name || "Clase")}</div>
+              <div style="font-weight:600;">${repairText(r.class_type_name || "Clase")}</div>
               <div class="dim">${fmt(r.starts_at)} · ${repairText(r.location || "Centro")}</div>
               ${r.description ? `<div class="dim">${repairText(r.description)}</div>` : ""}
               <div class="dim">Reserva #${r.reservation_id} · Estado: ${repairText(r.status)}</div>
@@ -45,7 +45,7 @@ export async function MyReservationsPage() {
       : `<li style="list-style:none; padding:0;">
           <div class="empty-state">
             <div class="empty-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ff5b2e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
             </div>
             <p class="empty-title">Sin reservas aquí</p>
             <p class="empty-sub">Explora las clases disponibles y reserva tu próxima sesión.</p>
@@ -58,7 +58,7 @@ export async function MyReservationsPage() {
       ? `<ul class="list" style="margin:0;">${logs.map((log) => `
           <li class="row" style="align-items:flex-start; justify-content:space-between; gap:12px;">
             <div style="flex:1; min-width:0;">
-              <div style="font-weight:1000;">${repairText(log.title || "Entrenamiento")}</div>
+              <div style="font-weight:600;">${repairText(log.title || "Entrenamiento")}</div>
               <div class="dim">${formatLogDate(log.date || log.createdAt)}</div>
               ${log.notes ? `<div class="dim" style="margin-top:4px;">${repairText(log.notes)}</div>` : ""}
               ${log.description ? `<div class="dim" style="margin-top:4px;">${repairText(log.description)}</div>` : ""}

@@ -46,12 +46,12 @@ const displayMemberName = (member = {}) => {
 };
 
 const AVATAR_PALETTES = [
-  ["#28cdb4", "#0d6152"],
-  ["#ff7a59", "#5c1a08"],
-  ["#5c7bff", "#0d1a5c"],
-  ["#fdbc2e", "#5c3d08"],
-  ["#a78bfa", "#2d1a5c"],
-  ["#34d399", "#064e3b"],
+  ["#2563eb", "#1e3a8a"],
+  ["#10b981", "#064e3b"],
+  ["#6366f1", "#312e81"],
+  ["#f59e0b", "#78350f"],
+  ["#8b5cf6", "#4c1d95"],
+  ["#0ea5e9", "#0c4a6e"],
 ];
 
 const avatarPalette = (id) => AVATAR_PALETTES[Math.abs(Number(id) || 0) % AVATAR_PALETTES.length];
@@ -76,7 +76,7 @@ const prefChips = (value, fallback = "Sin definir") => {
   return items
     .map(
       (item) =>
-        `<span style="display:inline-flex; align-items:center; padding:4px 10px; border-radius:999px; background:rgba(92,123,255,.12); border:1px solid rgba(92,123,255,.25); font-size:12px; font-weight:800; color:#1a2a5e; white-space:nowrap;">${escapeHtml(item)}</span>`
+        `<span style="display:inline-flex; align-items:center; padding:4px 10px; border-radius:999px; background:rgba(37,99,235,.08); border:1px solid rgba(37,99,235,.18); font-size:12px; font-weight:600; color:#1e3a8a; white-space:nowrap;">${escapeHtml(item)}</span>`
     )
     .join("");
 };
@@ -103,10 +103,10 @@ const renderMemberCards = (members = []) => {
       const roleLabel = role === "admin" ? "Admin" : role === "trainer" ? "Entrenador" : "Miembro";
       const roleBg =
         role === "admin"
-          ? "rgba(255,122,89,.18); border-color:rgba(255,122,89,.4); color:#6b1d08;"
+          ? "rgba(239,68,68,.10); border-color:rgba(239,68,68,.22); color:#991b1b;"
           : role === "trainer"
-          ? "rgba(92,123,255,.18); border-color:rgba(92,123,255,.4); color:#1a2a5e;"
-          : "rgba(40,205,180,.18); border-color:rgba(40,205,180,.4); color:#0d6152;";
+          ? "rgba(37,99,235,.10); border-color:rgba(37,99,235,.22); color:#1e3a8a;"
+          : "rgba(16,185,129,.10); border-color:rgba(16,185,129,.22); color:#065f46;";
 
       const [avatarBg, avatarFg] = avatarPalette(user.id);
       const logsTotal = Number(member?.logs_total || logs.length || 0);
@@ -123,12 +123,12 @@ const renderMemberCards = (members = []) => {
         const dateLabel = escapeHtml(formatDate(log?.date || log?.createdAt));
         const duration = Number(log?.duration_min || 0);
         return `
-          <div style="display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:10px; background:rgba(255,255,255,.72); border:1px solid rgba(13,26,45,.09);">
-            <div style="width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,rgba(40,205,180,.22),rgba(92,123,255,.18)); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-              <svg width="15" height="15" fill="none" stroke="#28cdb4" stroke-width="2.2" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          <div style="display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:10px; background:rgba(255,255,255,.85); border:1px solid rgba(24,24,27,.08);">
+            <div style="width:32px; height:32px; border-radius:8px; background:rgba(37,99,235,.08); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <svg width="15" height="15" fill="none" stroke="#2563eb" stroke-width="2.2" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
             </div>
             <div style="flex:1; min-width:0;">
-              <div style="font-size:13px; font-weight:800; color:#0f1828; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${title}</div>
+              <div style="font-size:13px; font-weight:500; color:#18181b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${title}</div>
               <div style="font-size:11px; color:#5a6680; margin-top:1px;">${dateLabel}${duration > 0 ? ` · ${duration} min` : ""}</div>
             </div>
           </div>`;
@@ -151,15 +151,15 @@ const renderMemberCards = (members = []) => {
 
           <!-- Header con avatar -->
           <div style="padding:18px 18px 14px; display:flex; gap:14px; align-items:flex-start; border-bottom:1px solid rgba(13,26,45,.07);">
-            <div style="width:52px; height:52px; border-radius:14px; background:linear-gradient(135deg, ${avatarBg}, ${avatarBg}cc); display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:1000; color:${avatarFg}; flex-shrink:0; border:2px solid rgba(255,255,255,.8); box-shadow:0 6px 14px rgba(13,26,45,.14);">
+            <div style="width:52px; height:52px; border-radius:14px; background:linear-gradient(135deg, ${avatarBg}, ${avatarBg}cc); display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700; color:${avatarFg}; flex-shrink:0; border:2px solid rgba(255,255,255,.8); box-shadow:0 6px 14px rgba(13,26,45,.14);">
               ${escapeHtml(initials(member))}
             </div>
             <div style="flex:1; min-width:0;">
-              <div style="font-size:17px; font-weight:900; color:#0f1828; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(displayMemberName(member))}</div>
+              <div style="font-size:17px; font-weight:600; color:#18181b; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(displayMemberName(member))}</div>
               <div style="font-size:12.5px; color:#5a6680; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(user.email || "Sin email")}</div>
               <div style="margin-top:6px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                <span style="display:inline-flex; align-items:center; padding:3px 9px; border-radius:999px; border:1px solid; background:${roleBg} font-size:11px; font-weight:900; letter-spacing:.04em; text-transform:uppercase;">${escapeHtml(roleLabel)}</span>
-                <span style="font-size:11px; color:#8a96a8; font-weight:700;">ID ${escapeHtml(String(user.id || "-"))}</span>
+                <span style="display:inline-flex; align-items:center; padding:3px 9px; border-radius:999px; border:1px solid; background:${roleBg} font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase;">${escapeHtml(roleLabel)}</span>
+                <span style="font-size:11px; color:#71717a; font-weight:700;">ID ${escapeHtml(String(user.id || "-"))}</span>
               </div>
             </div>
           </div>
@@ -167,33 +167,33 @@ const renderMemberCards = (members = []) => {
           <!-- Stats strip -->
           <div style="display:grid; grid-template-columns:1fr 1fr; border-bottom:1px solid rgba(13,26,45,.07);">
             <div style="padding:10px 16px; border-right:1px solid rgba(13,26,45,.07);">
-              <div style="font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; color:#8a96a8;">Última actividad</div>
-              <div style="font-size:13px; font-weight:800; color:#0f1828; margin-top:2px;">${escapeHtml(formatDate(member?.last_activity_at))}</div>
+              <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:#71717a;">Última actividad</div>
+              <div style="font-size:13px; font-weight:500; color:#18181b; margin-top:2px;">${escapeHtml(formatDate(member?.last_activity_at))}</div>
             </div>
             <div style="padding:10px 16px;">
-              <div style="font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; color:#8a96a8;">Sesiones</div>
-              <div style="font-size:22px; font-weight:1000; color:#0f1828; line-height:1.1;">${logsTotal}</div>
+              <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:#71717a;">Sesiones</div>
+              <div style="font-size:22px; font-weight:700; color:#18181b; line-height:1.1;">${logsTotal}</div>
             </div>
           </div>
 
           <!-- Preferencias -->
           <div style="padding:14px 18px; display:flex; flex-direction:column; gap:12px; border-bottom:1px solid rgba(13,26,45,.07);">
-            <div style="font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.1em; color:#8a96a8;">Preferencias</div>
+            <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.1em; color:#71717a;">Preferencias</div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
               <div style="background:rgba(255,255,255,.7); border:1px solid rgba(13,26,45,.09); border-radius:12px; padding:10px 12px;">
-                <div style="font-size:10.5px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; color:#28cdb4; margin-bottom:6px;">Objetivo</div>
+                <div style="font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#71717a; margin-bottom:6px;">Objetivo</div>
                 <div style="display:flex; flex-wrap:wrap; gap:4px;">${pref.goal}</div>
               </div>
               <div style="background:rgba(255,255,255,.7); border:1px solid rgba(13,26,45,.09); border-radius:12px; padding:10px 12px;">
-                <div style="font-size:10.5px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; color:#5c7bff; margin-bottom:6px;">Entrenamiento</div>
+                <div style="font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#71717a; margin-bottom:6px;">Entrenamiento</div>
                 <div style="display:flex; flex-wrap:wrap; gap:4px;">${pref.training}</div>
               </div>
               <div style="background:rgba(255,255,255,.7); border:1px solid rgba(13,26,45,.09); border-radius:12px; padding:10px 12px;">
-                <div style="font-size:10.5px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; color:#ff7a59; margin-bottom:6px;">Lesiones</div>
+                <div style="font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#71717a; margin-bottom:6px;">Lesiones</div>
                 <div style="display:flex; flex-wrap:wrap; gap:4px;">${pref.injuries}</div>
               </div>
               <div style="background:rgba(255,255,255,.7); border:1px solid rgba(13,26,45,.09); border-radius:12px; padding:10px 12px;">
-                <div style="font-size:10.5px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; color:#f59e0b; margin-bottom:6px;">Equipamiento</div>
+                <div style="font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:#f59e0b; margin-bottom:6px;">Equipamiento</div>
                 <div style="display:flex; flex-wrap:wrap; gap:4px;">${pref.equipment}</div>
               </div>
             </div>
@@ -202,7 +202,7 @@ const renderMemberCards = (members = []) => {
           <!-- Logs -->
           <div style="padding:14px 18px; flex:1; display:flex; flex-direction:column; gap:8px;">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:2px;">
-              <div style="font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.1em; color:#8a96a8;">Últimas sesiones</div>
+              <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.1em; color:#71717a;">Últimas sesiones</div>
             </div>
             ${logsHtml}
             ${extraCount > 0 ? `
@@ -210,9 +210,9 @@ const renderMemberCards = (members = []) => {
               id="tu-toggle-${cardId}"
               data-card-id="${cardId}"
               type="button"
-              style="margin-top:4px; display:flex; align-items:center; justify-content:center; gap:6px; width:100%; padding:9px 14px; border-radius:10px; border:1px solid rgba(92,123,255,.3); background:rgba(92,123,255,.08); color:#1a2a5e; font-size:12px; font-weight:900; letter-spacing:.04em; cursor:pointer; transition:background .14s ease, transform .14s ease;"
-              onmouseenter="this.style.background='rgba(92,123,255,.16)'; this.style.transform='translateY(-1px)';"
-              onmouseleave="this.style.background='rgba(92,123,255,.08)'; this.style.transform='';">
+              style="margin-top:4px; display:flex; align-items:center; justify-content:center; gap:6px; width:100%; padding:9px 14px; border-radius:10px; border:1px solid rgba(24,24,27,.10); background:rgba(24,24,27,.04); color:#18181b; font-size:12px; font-weight:600; letter-spacing:.04em; cursor:pointer; transition:background .14s ease, transform .14s ease;"
+              onmouseenter="this.style.background='rgba(24,24,27,.08)'; this.style.transform='translateY(-1px)';"
+              onmouseleave="this.style.background='rgba(24,24,27,.04)'; this.style.transform='';">
               <svg id="tu-chevron-${cardId}" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="transition:transform .2s ease;"><path d="M6 9l6 6 6-6"/></svg>
               Ver ${extraCount} sesiones más
             </button>` : ""}
@@ -285,8 +285,8 @@ export async function TrainerUsersPage() {
             extra.style.gap = "8px";
             card.style.gridColumn = "1 / -1";
             card.style.transform = "";
-            card.style.boxShadow = "0 20px 48px rgba(13,26,45,.18)";
-            card.style.borderColor = "rgba(92,123,255,.35)";
+            card.style.boxShadow = "0 8px 24px rgba(24,24,27,.12)";
+            card.style.borderColor = "rgba(37,99,235,.22)";
             card.dataset.expanded = "1";
             if (chevron) chevron.style.transform = "rotate(180deg)";
             btn.innerHTML = btn.innerHTML.replace(/Ver \d+ sesiones más/, "Ocultar sesiones");
@@ -369,20 +369,20 @@ export async function TrainerUsersPage() {
             <!-- Page header -->
             <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; padding-bottom:14px; border-bottom:1px solid rgba(13,26,45,.08);">
               <div>
-                <div style="font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.14em; color:#28cdb4; margin-bottom:4px;">Panel de entrenador</div>
+                <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.14em; color:#71717a; margin-bottom:4px;">Panel de entrenador</div>
                 <h2 class="h2" style="margin:0 0 6px;">Mis usuarios</h2>
                 <p class="sub" style="margin:0; font-size:14px; color:#5a6680;">Preferencias de entrenamiento y sesiones registradas de cada miembro.</p>
               </div>
               <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                <div style="display:flex; align-items:center; gap:6px; padding:8px 14px; border-radius:999px; background:rgba(40,205,180,.12); border:1px solid rgba(40,205,180,.3);">
-                  <div style="width:8px; height:8px; border-radius:50%; background:#28cdb4; box-shadow:0 0 0 4px rgba(40,205,180,.25);"></div>
-                  <span id="trainer-users-count" style="font-size:13px; font-weight:900; color:#0d6152;">${initialMembers.length} usuarios</span>
+                <div style="display:flex; align-items:center; gap:6px; padding:8px 14px; border-radius:999px; background:rgba(24,24,27,.05); border:1px solid rgba(24,24,27,.08);">
+                  <div style="width:8px; height:8px; border-radius:50%; background:#10b981;"></div>
+                  <span id="trainer-users-count" style="font-size:13px; font-weight:600; color:#18181b;">${initialMembers.length} usuarios</span>
                 </div>
                 <button class="btn btn-ghost" id="trainer-users-refresh" type="button" style="padding:8px 16px; font-size:12px;">Actualizar</button>
               </div>
             </div>
 
-            <div id="trainer-users-status" style="font-size:12px; color:#8a96a8; font-weight:700; margin-top:-6px;">Sincronizado: ${escapeHtml(formatDate(initialGeneratedAt))}.</div>
+            <div id="trainer-users-status" style="font-size:12px; color:#71717a; font-weight:700; margin-top:-6px;">Sincronizado: ${escapeHtml(formatDate(initialGeneratedAt))}.</div>
 
             <div id="trainer-users-list" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(360px, 1fr)); gap:16px;">
               ${renderMemberCards(initialMembers)}

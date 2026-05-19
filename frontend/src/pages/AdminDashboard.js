@@ -40,7 +40,7 @@ export async function AdminDashboard() {
     const full = Number(cls.booked_count || 0) >= Number(cls.capacity);
     return `
       <article class="class-card" data-class-id="${cls.id}">
-        <div class="tag red">${cls.class_type_name || "Clase"}</div>
+        <div class="tag">${cls.class_type_name || "Clase"}</div>
         <div style="display:flex; justify-content:space-between; gap:8px; align-items:flex-start;">
           <div>
             <div style="font-weight:1000; font-size:18px;">${fmtDate(cls.starts_at)}</div>
@@ -70,7 +70,7 @@ export async function AdminDashboard() {
     ? classes.map(renderClassCard).join("")
     : `<div class="empty-state" style="grid-column:1/-1">
         <div class="empty-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ff5b2e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="10" y1="16" x2="14" y2="16"/></svg>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="10" y1="16" x2="14" y2="16"/></svg>
         </div>
         <p class="empty-title">Sin clases programadas</p>
         <p class="empty-sub">Crea la primera clase usando el formulario de la derecha.</p>
@@ -158,7 +158,7 @@ export async function AdminDashboard() {
         ? items.map(renderClassCard).join("")
         : `<div class="empty-state" style="grid-column:1/-1">
             <div class="empty-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ff5b2e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
             </div>
             <p class="empty-title">Sin resultados</p>
             <p class="empty-sub">Ninguna clase coincide con el filtro seleccionado.</p>
@@ -168,7 +168,7 @@ export async function AdminDashboard() {
     const setStatus = (txt, isError = false) => {
       if (!classStatus) return;
       classStatus.textContent = txt;
-      classStatus.style.color = isError ? "#fca5a5" : "var(--muted)";
+      classStatus.style.color = isError ? "#ef4444" : "var(--muted)";
     };
 
     const loadClasses = async () => {
@@ -389,7 +389,7 @@ export async function AdminDashboard() {
         form.reset();
         if (staffMsg) {
           staffMsg.textContent = "Entrenador creado correctamente.";
-          staffMsg.style.color = "#2be7c6";
+          staffMsg.style.color = "#10b981";
         }
         const updatedTrainers = await authService.listByRole("trainer").catch(() => []);
         document.querySelectorAll("select[name='trainerId']").forEach(select => {
@@ -401,7 +401,7 @@ export async function AdminDashboard() {
       } catch (err) {
         if (staffMsg) {
           staffMsg.textContent = err.message || "No se pudo crear el entrenador.";
-          staffMsg.style.color = "#fca5a5";
+          staffMsg.style.color = "#ef4444";
         }
       } finally {
         toggle(false);
@@ -412,7 +412,7 @@ export async function AdminDashboard() {
     syncClassTypeSelects(classTypes);
     if (classTypeErrorEl) {
       classTypeErrorEl.textContent = classTypesError || (classTypes.length ? "" : "No hay tipos de clase todavía. Crea uno abajo.");
-      if (classTypesError) classTypeErrorEl.style.color = "#fca5a5";
+      if (classTypesError) classTypeErrorEl.style.color = "#ef4444";
     }
 
   }, 0);
@@ -471,7 +471,7 @@ export async function AdminDashboard() {
                   <form id="admin-create-class" class="form" style="margin:0; display:flex; flex-direction:column; gap:10px; background:transparent; padding:0; flex:1;">
                     <label>Tipo de clase</label>
                     <select name="classTypeId" data-class-type-select="true" required ${classTypes.length ? "" : "disabled"}>${typeOptions}</select>
-                    <div class="dim" id="admin-class-type-error" style="color:#fca5a5;">${classTypesError || ""}</div>
+                    <div class="dim" id="admin-class-type-error" style="color:#ef4444;">${classTypesError || ""}</div>
                     <label>Trainer</label>
                     <select name="trainerId" required>
                       <option value="" disabled selected hidden>Elige trainer</option>
@@ -501,7 +501,7 @@ export async function AdminDashboard() {
                     <textarea name="description" placeholder="Qué se hará, nivel, material, sensaciones..."></textarea>
                     <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
                       <button class="btn btn-primary" type="submit">Crear clase</button>
-                      <span id="admin-create-msg" style="color:#2be7c6; font-weight:700;"></span>
+                      <span id="admin-create-msg" style="color:#10b981; font-weight:600;"></span>
                     </div>
                   </form>
                 </div>
@@ -578,7 +578,7 @@ export async function AdminDashboard() {
                 <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
                   <button class="btn btn-primary" type="submit">Guardar cambios</button>
                   <button class="btn btn-ghost" type="button" id="admin-edit-cancel">Cancelar</button>
-                  <span id="admin-edit-msg" style="color:#2be7c6; font-weight:700;"></span>
+                  <span id="admin-edit-msg" style="color:#10b981; font-weight:600;"></span>
                 </div>
               </form>
             </div>

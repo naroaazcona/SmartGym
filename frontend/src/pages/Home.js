@@ -120,66 +120,48 @@ export async function HomePage() {
   const hasRealClasses = upcomingClasses.length > 0;
 
   /* === Copys fijos === */
-  const facilityShots = [
-    {
-      title: "Sala de fuerza",
-      text: "Plataformas, racks y discos calibrados para levantamientos pesados.",
-      img: "https://images.unsplash.com/photo-1483721310020-03333e577078?auto=format&fit=crop&w=1400&q=80",
-    },
-    {
-      title: "Zona cardio",
-      text: "Cintas Woodway, remos Concept2 y assault bikes listas.",
-      img: "https://images.unsplash.com/photo-1517960413843-0aee8e2b3285?auto=format&fit=crop&w=1600&q=80",
-    },
-    {
-      title: "Estudio funcional",
-      text: "Kettlebells, mancuernas, slam balls y turf para sled.",
-      img: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1600&q=80",
-    },
-  ];
-
   const quickPlans = [
     {
       title: "Fullbody 3x/sem",
       focus: "Fuerza + core",
       time: "45-55 min",
       tip: "Base: sentadilla, press, remo.",
-      img: "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=1400&q=80",
+      img: "https://images.unsplash.com/photo-1558611848-73f7eb4001a1?auto=format&fit=crop&w=1400&q=80",
     },
     {
       title: "HIIT + movilidad",
       focus: "Cardio + stretch",
       time: "30 min",
       tip: "4 bloques 40/20 + 10' movilidad.",
-      img: "https://images.unsplash.com/photo-1521805103424-d8f8430e8933?auto=format&fit=crop&w=1400&q=80",
+      img: "https://images.unsplash.com/photo-1554284126-aa88f22d8b74?auto=format&fit=crop&w=1400&q=80",
     },
     {
       title: "Torso potente",
       focus: "Pecho + espalda",
       time: "40-50 min",
       tip: "Superseries de empuje y traccion.",
-      img: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=1400&q=80",
+      img: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1400&q=80",
     },
     {
       title: "Pierna y gluteo",
       focus: "Lower body",
       time: "50 min",
       tip: "Sentadilla, bisagra y zancadas pesadas.",
-      img: "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=1400&q=80",
+      img: "https://images.unsplash.com/photo-1579758629938-03607ccdbaba?auto=format&fit=crop&w=1400&q=80",
     },
     {
       title: "Core + postura",
       focus: "Estabilidad",
       time: "25-30 min",
       tip: "Plancha, antirotacion y control lumbo-pelvico.",
-      img: "https://images.unsplash.com/photo-1518310383802-640c2de311b2?auto=format&fit=crop&w=1400&q=80",
+      img: "https://images.unsplash.com/photo-1546484959-f9a9c6c4b4c1?auto=format&fit=crop&w=1400&q=80",
     },
     {
       title: "Metcon express",
       focus: "Quema calorica",
       time: "20-25 min",
       tip: "Circuito rapido con kettlebell y remo.",
-      img: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1400&q=80",
+      img: "https://images.unsplash.com/photo-1546484475-7e0b1cd5a33e?auto=format&fit=crop&w=1400&q=80",
     },
   ];
 
@@ -190,10 +172,10 @@ export async function HomePage() {
       (c) => `
       <article class="class-card">
         <div class="backdrop" style="background-image:url('${c.image}')"></div>
-        <div class="tag red">${c.type}</div>
+        <div class="tag">${c.type}</div>
         <div style="display:flex; justify-content:space-between; gap:8px; align-items:center;">
-          <div style="font-weight:1000; font-size:20px;">${c.title}</div>
-          <span class="badge green">${c.booked}/${c.capacity || "?"} reservas</span>
+          <div style="font-weight:600; font-size:17px;">${c.title}</div>
+          <span class="badge">${c.booked}/${c.capacity || "?"} reservas</span>
         </div>
         <div class="dim">${c.dateLabel} · ${c.location} · ${c.capacity} plazas</div>
         ${c.description ? `<p class="sub" style="margin:0;">${c.description}</p>` : ""}
@@ -278,7 +260,7 @@ export async function HomePage() {
           <div class="plan-thumb" style="background-image:url('${p.img}')"></div>
           <div class="plan-body">
             <div class="kicker">${p.focus}</div>
-            <div style="font-weight:1000; font-size:18px;">${p.title}</div>
+            <div style="font-weight:700; font-size:17px;">${p.title}</div>
             <div class="dim">${p.time}</div>
             <p class="sub" style="margin:0;">${p.tip}</p>
             <div class="dim" style="margin-top:8px; font-weight:700;">${isOnline ? "Clic para ver el plan completo" : "Accede para guardar esta idea"}</div>
@@ -393,7 +375,7 @@ export async function HomePage() {
 
         <section class="container" style="display:flex; flex-direction:column; gap:16px;">
           <div class="panel-card spotlight">
-            <h3>Clases creadas</h3>
+            <h3>Clases disponibles</h3>
             <p class="sub">${hasRealClasses ? "Elige viendo la sala, aforo y coach antes de reservar." : "Vista previa de clases populares. Accede para reservar plaza."}</p>
             <div class="class-gallery" style="margin-top:12px;">
               ${classCards}
@@ -407,23 +389,6 @@ export async function HomePage() {
             <div class="class-gallery" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
               ${planCards}
             </div>
-          </div>
-
-          <div class="feature-grid">
-            ${facilityShots
-              .map(
-                (f) => `
-                <div class="feature-card">
-                  <img src="${f.img}" alt="${f.title}" loading="lazy" />
-                  <div class="content">
-                    <div class="kicker">Espacio</div>
-                    <h3 style="margin:0; font-size:20px;">${f.title}</h3>
-                    <p class="sub" style="margin:0;">${f.text}</p>
-                  </div>
-                </div>
-              `
-              )
-              .join("")}
           </div>
         </section>
       </main>

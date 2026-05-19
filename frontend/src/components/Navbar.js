@@ -50,8 +50,8 @@ export function Navbar() {
             ${role === "admin" ? `<a class="linkbtn" href="#/admin-usuarios">Usuarios</a>` : ``}
             ${role === "admin" ? `<a class="linkbtn" href="#/admin-tipos">Tipos clase</a>` : ``}
             ${role === "admin" ? `<a class="linkbtn" href="#/admin-entrenadores">Entrenadores</a>` : ``}
-            ${isOnline ? `<button class="linkbtn" id="logout-btn">Salir</button>` : ``}
             ${isOnline && !isTrainer && !isAdmin ? `<a class="avatar-btn" href="#/perfil" title="Mi perfil" aria-label="Mi perfil">&#128100;</a>` : ``}
+            ${isOnline ? `<button class="linkbtn" id="logout-btn">Salir</button>` : ``}
           </div>
         </div>
       </div>

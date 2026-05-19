@@ -69,13 +69,13 @@ const renderRecommendationClassCard = (item) => {
     : "";
 
   return `
-    <article class="card member-rec-card" style="padding:14px; border-color:rgba(40,205,180,.35); background:linear-gradient(180deg, rgba(40,205,180,.12), rgba(255,255,255,.92)); box-shadow:none; display:flex; flex-direction:column; gap:8px;">
+    <article class="card member-rec-card" style="padding:14px; border-color:rgba(16,185,129,.22); background:linear-gradient(180deg, rgba(16,185,129,.07), rgba(255,255,255,.97)); box-shadow:none; display:flex; flex-direction:column; gap:8px;">
       <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
         <div>
           <div class="field-label">${escapeHtml(item.day)}</div>
-          <div style="font-weight:900; font-size:16px;">${escapeHtml(item.focus)}</div>
+          <div style="font-weight:600; font-size:16px;">${escapeHtml(item.focus)}</div>
         </div>
-        <span class="badge green">${escapeHtml(item.duration)}</span>
+        <span class="badge">${escapeHtml(item.duration)}</span>
       </div>
       <div class="dim">Clase objetivo: ${escapeHtml(item.classType)}</div>
       ${chips}
@@ -84,9 +84,9 @@ const renderRecommendationClassCard = (item) => {
 };
 
 const renderRecommendationDietCard = (item) => `
-  <article class="card member-rec-card" style="padding:14px; border-color:rgba(92,123,255,.35); background:linear-gradient(180deg, rgba(92,123,255,.10), rgba(255,255,255,.92)); box-shadow:none; display:flex; flex-direction:column; gap:6px;">
+  <article class="card member-rec-card" style="padding:14px; border-color:rgba(37,99,235,.20); background:linear-gradient(180deg, rgba(37,99,235,.06), rgba(255,255,255,.97)); box-shadow:none; display:flex; flex-direction:column; gap:6px;">
     <div class="kicker">Nutrición</div>
-    <div style="font-weight:900; font-size:15px;">${escapeHtml(item.title)}</div>
+    <div style="font-weight:600; font-size:15px;">${escapeHtml(item.title)}</div>
     <p class="sub" style="margin:0;">${escapeHtml(item.detail || "Sin detalle adicional")}</p>
   </article>
 `;
@@ -179,7 +179,7 @@ const renderTrainingLogs = (logs = []) => {
     return `
       <div class="empty-state">
         <div class="empty-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ff5b2e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18"/><path d="M6 11h12"/><path d="M9 15h6"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18"/><path d="M6 11h12"/><path d="M9 15h6"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
         </div>
         <p class="empty-title">Sin entrenamientos registrados</p>
         <p class="empty-sub">Usa el formulario para registrar tu primera sesion.</p>
@@ -198,7 +198,7 @@ const renderTrainingLogs = (logs = []) => {
           return `
             <li class="row" style="align-items:flex-start; justify-content:space-between; gap:12px;">
               <div style="flex:1; min-width:0;">
-                <div style="font-weight:1000;">${escapeHtml(title)}</div>
+                <div style="font-weight:700;">${escapeHtml(title)}</div>
                 <div class="dim">${escapeHtml(dateLabel)}</div>
                 ${notes ? `<div class="dim" style="margin-top:4px;">${escapeHtml(notes)}</div>` : ""}
               </div>
@@ -858,8 +858,8 @@ export async function MemberAiDashboard() {
                   isPremium
                     ? `<div id="member-rec-diets" style="display:grid; gap:10px;">${initialRecDietCards}</div>`
                     : `<div id="member-rec-diets" style="display:grid; gap:10px;">
-                        <div style="padding:18px; border-radius:12px; background:linear-gradient(135deg,rgba(92,123,255,.12),rgba(40,205,180,.10)); border:1.5px dashed rgba(92,123,255,.4); text-align:center; display:flex; flex-direction:column; gap:10px; align-items:center;">
-                          <div style="font-weight:900; font-size:15px;">Contenido Premium</div>
+                        <div style="padding:18px; border-radius:12px; background:rgba(244,244,245,1); border:1.5px dashed rgba(24,24,27,.12); text-align:center; display:flex; flex-direction:column; gap:10px; align-items:center;">
+                          <div style="font-weight:600; font-size:15px;">Contenido Premium</div>
                           <p class="sub" style="margin:0;">La nutrición personalizada está disponible para usuarios Premium. <a href="#/suscripcion" style="color:var(--accent); font-weight:700;">Actualizar plan -></a></p>
                         </div>
                       </div>`
