@@ -362,9 +362,9 @@ export async function TrainerUsersPage() {
     <div class="bg-blobs"></div>
     <div class="screen">
       ${Navbar()}
-      <main style="width:100%; padding:16px 20px 32px;">
-        <section style="width:100%;">
-          <div class="card" style="width:100%; min-height:calc(100vh - 140px); display:flex; flex-direction:column; gap:16px;">
+      <main class="container trainer-users-main">
+        <section class="trainer-users-section">
+          <div class="card trainer-users-card">
 
             <!-- Page header -->
             <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; padding-bottom:14px; border-bottom:1px solid rgba(13,26,45,.08);">
@@ -382,9 +382,9 @@ export async function TrainerUsersPage() {
               </div>
             </div>
 
-            <div id="trainer-users-status" style="font-size:12px; color:#71717a; font-weight:700; margin-top:-6px;">Sincronizado: ${escapeHtml(formatDate(initialGeneratedAt))}.</div>
+            <div id="trainer-users-status" class="trainer-users-status">Sincronizado: ${escapeHtml(formatDate(initialGeneratedAt))}.</div>
 
-            <div id="trainer-users-list" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(360px, 1fr)); gap:16px;">
+            <div id="trainer-users-list" class="trainer-users-grid">
               ${renderMemberCards(initialMembers)}
             </div>
           </div>

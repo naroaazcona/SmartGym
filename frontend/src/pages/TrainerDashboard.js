@@ -97,7 +97,7 @@ export async function TrainerDashboard() {
         <div class="tag ${full ? "red" : "green"}">${cls.class_type_name || "Clase"}</div>
         <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
           <div>
-            <div style="font-weight:1000;">${fmtDate(cls.starts_at)}</div>
+            <div style="font-weight:600;">${fmtDate(cls.starts_at)}</div>
             <div class="dim">${capacity} plazas - ${booked} reservas - ${cls.location || "Centro"}</div>
             ${cls.instructor_name ? `<div class="dim">Coach: ${cls.instructor_name}</div>` : ""}
           </div>
@@ -137,7 +137,7 @@ export async function TrainerDashboard() {
     ? myClasses.map(renderCard).join("")
     : `<div class="empty-state">
         <div class="empty-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ff5b2e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </div>
         <p class="empty-title">Sin clases asignadas</p>
         <p class="empty-sub">No tienes clases asignadas aún.</p>
@@ -186,7 +186,7 @@ export async function TrainerDashboard() {
         ? items.map(renderCard).join("")
         : `<div class="empty-state">
             <div class="empty-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ff5b2e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </div>
             <p class="empty-title">Sin clases en el rango</p>
             <p class="empty-sub">Ajusta el filtro para consultar otros dias o revisa el historial.</p>

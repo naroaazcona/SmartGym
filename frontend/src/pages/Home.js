@@ -36,11 +36,11 @@ export async function HomePage() {
   const imgForType = (type = "") => {
     const key = String(type || "").toLowerCase();
     if (key.includes("cross")) return "https://images.unsplash.com/photo-1558611848-73f7eb4001a1?auto=format&fit=crop&w=1400&q=80";
-    if (key.includes("hiit")) return "https://images.unsplash.com/photo-1554284126-aa88f22d8b74?auto=format&fit=crop&w=1400&q=80";
+    if (key.includes("hiit")) return "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&w=1400&q=80";
     if (key.includes("spin") || key.includes("cycle"))
-      return "https://images.unsplash.com/photo-1546484475-7e0b1cd5a33e?auto=format&fit=crop&w=1400&q=80";
+      return "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=1400&q=80";
     if (key.includes("mob") || key.includes("yoga"))
-      return "https://images.unsplash.com/photo-1546484959-f9a9c6c4b4c1?auto=format&fit=crop&w=1400&q=80";
+      return "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=1400&q=80";
     return "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=1400&q=80";
   };
   const normalizeClass = (cls) => {
@@ -69,19 +69,6 @@ export async function HomePage() {
       to: endDate.toISOString(),
     });
     return Array.isArray(res) ? res.map(normalizeClass).filter((c) => c.startsAt) : [];
-  };
-  const fetchUpcomingClasses = async (fromDate) => {
-    const from = new Date(fromDate);
-    from.setHours(0, 0, 0, 0);
-    const res = await gymService.listClasses({
-      from: from.toISOString(),
-    });
-    return Array.isArray(res)
-      ? res
-          .map(normalizeClass)
-          .filter((c) => c.startsAt && c.startsAt.getTime() >= Date.now())
-          .sort((a, b) => a.startsAt - b.startsAt)
-      : [];
   };
   const buildFallbackClasses = () => {
     const now = new Date();
@@ -115,9 +102,8 @@ export async function HomePage() {
   /* === Datos en vivo === */
   let weekStart = startOfWeek(new Date());
   const weekClasses = await fetchWeekClasses(weekStart).catch(() => []);
-  const upcomingClasses = await fetchUpcomingClasses(new Date()).catch(() => []);
-  const showcaseClasses = upcomingClasses.length ? upcomingClasses : buildFallbackClasses();
-  const hasRealClasses = upcomingClasses.length > 0;
+  const showcaseClasses = weekClasses.sort((a, b) => a.startsAt - b.startsAt);
+  const hasRealClasses = showcaseClasses.length > 0;
 
   /* === Copys fijos === */
   const quickPlans = [
@@ -149,47 +135,38 @@ export async function HomePage() {
       tip: "Sentadilla, bisagra y zancadas pesadas.",
       img: "https://images.unsplash.com/photo-1579758629938-03607ccdbaba?auto=format&fit=crop&w=1400&q=80",
     },
-    {
-      title: "Core + postura",
-      focus: "Estabilidad",
-      time: "25-30 min",
-      tip: "Plancha, antirotacion y control lumbo-pelvico.",
-      img: "https://images.unsplash.com/photo-1546484959-f9a9c6c4b4c1?auto=format&fit=crop&w=1400&q=80",
-    },
-    {
-      title: "Metcon express",
-      focus: "Quema calorica",
-      time: "20-25 min",
-      tip: "Circuito rapido con kettlebell y remo.",
-      img: "https://images.unsplash.com/photo-1546484475-7e0b1cd5a33e?auto=format&fit=crop&w=1400&q=80",
-    },
   ];
 
   /* === Render helpers === */
-  const classCards = showcaseClasses
-    .slice(0, 8)
-    .map(
-      (c) => `
-      <article class="class-card">
-        <div class="backdrop" style="background-image:url('${c.image}')"></div>
-        <div class="tag">${c.type}</div>
-        <div style="display:flex; justify-content:space-between; gap:8px; align-items:center;">
-          <div style="font-weight:600; font-size:17px;">${c.title}</div>
-          <span class="badge">${c.booked}/${c.capacity || "?"} reservas</span>
-        </div>
-        <div class="dim">${c.dateLabel} · ${c.location} · ${c.capacity} plazas</div>
-        ${c.description ? `<p class="sub" style="margin:0;">${c.description}</p>` : ""}
-        <div class="chip-row" style="margin-top:6px;">
-          <span class="chip">${c.timeLabel}</span>
-          ${c.trainer ? `<span class="chip">Coach ${c.trainer}</span>` : ""}
-        </div>
-        <div class="cta-inline" style="margin-top:10px;">
-          <button class="btn btn-primary js-go-area">Reservar</button>
-          <button class="btn btn-ghost js-go-area">Ver detalles</button>
-        </div>
-      </article>`
-    )
-    .join("");
+  const classCards = hasRealClasses
+    ? showcaseClasses
+        .slice(0, 8)
+        .map(
+          (c) => `
+          <article class="class-card">
+            <div class="backdrop" style="background-image:url('${c.image}')"></div>
+            <div class="tag">${c.type}</div>
+            <div style="display:flex; justify-content:space-between; gap:8px; align-items:center;">
+              <div style="font-weight:600; font-size:17px;">${c.title}</div>
+              <span class="badge">${c.booked}/${c.capacity || "?"} reservas</span>
+            </div>
+            <div class="dim">${c.dateLabel} · ${c.location} · ${c.capacity} plazas</div>
+            ${c.description ? `<p class="sub" style="margin:0;">${c.description}</p>` : ""}
+            <div class="chip-row" style="margin-top:6px;">
+              <span class="chip">${c.timeLabel}</span>
+              ${c.trainer ? `<span class="chip">Coach ${c.trainer}</span>` : ""}
+            </div>
+            <div class="cta-inline" style="margin-top:10px;">
+              <button class="btn btn-primary js-go-area">Reservar</button>
+              <button class="btn btn-ghost js-go-area">Ver detalles</button>
+            </div>
+          </article>`
+        )
+        .join("")
+    : `<div class="empty-state" style="width:100%; text-align:center; padding:40px 20px;">
+        <p class="empty-title">No hay clases próximas programadas</p>
+        <p class="empty-sub">Cuando el equipo añada clases aparecerán aquí con toda la información.</p>
+      </div>`;
 
   const renderWeekCalendar = (startDate, items = []) => {
     const endDate = new Date(startDate.getTime() + 7 * dayMs - 1);
@@ -376,7 +353,7 @@ export async function HomePage() {
         <section class="container" style="display:flex; flex-direction:column; gap:16px;">
           <div class="panel-card spotlight">
             <h3>Clases disponibles</h3>
-            <p class="sub">${hasRealClasses ? "Elige viendo la sala, aforo y coach antes de reservar." : "Vista previa de clases populares. Accede para reservar plaza."}</p>
+            <p class="sub">${hasRealClasses ? "Elige viendo la sala, aforo y coach antes de reservar." : "Aún no hay clases programadas próximamente."}</p>
             <div class="class-gallery" style="margin-top:12px;">
               ${classCards}
             </div>
