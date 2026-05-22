@@ -137,7 +137,7 @@ export async function TrainerDashboard() {
     ? myClasses.map(renderCard).join("")
     : `<div class="empty-state">
         <div class="empty-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </div>
         <p class="empty-title">Sin clases asignadas</p>
         <p class="empty-sub">No tienes clases asignadas aún.</p>
@@ -186,7 +186,7 @@ export async function TrainerDashboard() {
         ? items.map(renderCard).join("")
         : `<div class="empty-state">
             <div class="empty-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </div>
             <p class="empty-title">Sin clases en el rango</p>
             <p class="empty-sub">Ajusta el filtro para consultar otros dias o revisa el historial.</p>

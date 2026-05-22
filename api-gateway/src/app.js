@@ -6,23 +6,33 @@ const rateLimit = require("express-rate-limit");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const AUTH_URL = process.env.AUTH_URL || "http://127.0.0.1:3001";
-const GYM_URL = process.env.GYM_URL || "http://127.0.0.1:3002";
-const TRAINING_URL = process.env.TRAINING_URL || "http://127.0.0.1:5000";
-const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:8080";
+const AUTH_URL = process.env.AUTH_URL || "http://auth-service:3001";
+const GYM_URL = process.env.GYM_URL || "http://gym-service:3002";
+const TRAINING_URL = process.env.TRAINING_URL || "http://training-service:5000";
 
+const rawCorsOrigins =
+  process.env.CORS_ORIGIN || "https://smartgym-app.com,https://www.smartgym-app.com";
+const CORS_ALLOWED_ORIGINS = rawCorsOrigins
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 // CORS
 app.use(
   cors({
-    origin: CORS_ORIGIN,
+    origin: (origin, callback) => {
+      // Allow non-browser requests (curl, health checks, server-to-server)
+      if (!origin) return callback(null, true);
+      if (CORS_ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+      return callback(new Error(`CORS origin not allowed: ${origin}`));
+    },
     credentials: true,
   })
 );
 
 // --- Rate limiters ---
 
-// Límite estricto para login y registro: 10 intentos cada 15 minutos por IP
+// Strict limit for login/register: 10 tries each 15 min per IP
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
@@ -31,7 +41,7 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Límite para recomendaciones IA: 20 peticiones cada 10 minutos por IP
+// Limit for AI recommendations: 20 requests each 10 min per IP
 const trainingLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   max: 20,
@@ -40,7 +50,7 @@ const trainingLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Límite general para el resto de rutas: 200 peticiones cada 10 minutos por IP
+// General limit for the rest: 200 requests each 10 min per IP
 const generalLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   max: 200,
@@ -49,7 +59,7 @@ const generalLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// --- Aplicar limiters ---
+// --- Apply limiters ---
 app.use("/auth/login", authLimiter);
 app.use("/auth/register", authLimiter);
 app.use("/auth/google", authLimiter);
@@ -117,8 +127,9 @@ app.get("/health", (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log("✅ API Gateway escuchando en el puerto " + PORT);
-  console.log("➡️  /auth     -> " + AUTH_URL);
-  console.log("➡️  /gym      -> " + GYM_URL);
-  console.log("➡️  /training -> " + TRAINING_URL);
+  console.log("API Gateway escuchando en el puerto " + PORT);
+  console.log("/auth     -> " + AUTH_URL);
+  console.log("/gym      -> " + GYM_URL);
+  console.log("/training -> " + TRAINING_URL);
+  console.log("CORS allowed origins -> " + CORS_ALLOWED_ORIGINS.join(", "));
 });

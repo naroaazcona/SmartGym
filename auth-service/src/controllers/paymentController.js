@@ -3,7 +3,9 @@ const pool = require("../database/db");
 
 const STRIPE_SECRET_KEY = (process.env.STRIPE_SECRET_KEY || "").trim();
 const STRIPE_WEBHOOK_SECRET = (process.env.STRIPE_WEBHOOK_SECRET || "").trim();
-const FRONTEND_URL = (process.env.FRONTEND_URL || "http://localhost:8080").trim();
+const FRONTEND_URL = (process.env.FRONTEND_URL || "").trim();
+const CORS_ORIGIN = (process.env.CORS_ORIGIN || "").trim();
+const DEFAULT_FRONTEND_URL = "https://smartgym-app.com";
 
 const PLAN_CONFIG = {
   basic: (process.env.STRIPE_PRICE_BASIC || "").trim(),
@@ -26,12 +28,79 @@ const isPriceId = (value = "") => String(value).startsWith("price_");
 const isProductId = (value = "") => String(value).startsWith("prod_");
 const isValidPlan = (value = "") => ["basic", "premium"].includes(String(value));
 
-function getFrontendBaseUrl() {
-  return (FRONTEND_URL || "http://localhost:8080").replace(/\/+$/, "");
+function normalizeOrigin(value = "") {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return "";
+  }
 }
 
-function getStripeRedirectUrls() {
-  const frontendBase = getFrontendBaseUrl();
+function isLocalOrigin(origin = "") {
+  const normalized = normalizeOrigin(origin);
+  if (!normalized) return false;
+  try {
+    const hostname = new URL(normalized).hostname.toLowerCase();
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "0.0.0.0";
+  } catch {
+    return false;
+  }
+}
+
+function parseAllowedOrigins() {
+  const configuredOrigins = CORS_ORIGIN.split(",")
+    .map((part) => normalizeOrigin(part))
+    .filter(Boolean);
+
+  return new Set(
+    [
+      ...configuredOrigins,
+      normalizeOrigin(FRONTEND_URL),
+      normalizeOrigin(DEFAULT_FRONTEND_URL),
+      normalizeOrigin("https://www.smartgym-app.com"),
+    ].filter(Boolean)
+  );
+}
+
+const ALLOWED_FRONTEND_ORIGINS = parseAllowedOrigins();
+
+function isAllowedFrontendOrigin(origin = "") {
+  const normalized = normalizeOrigin(origin);
+  return Boolean(normalized) && ALLOWED_FRONTEND_ORIGINS.has(normalized);
+}
+
+function extractFrontendOriginFromRequest(req) {
+  const headerOrigin = normalizeOrigin(req?.headers?.origin);
+  if (isAllowedFrontendOrigin(headerOrigin)) {
+    return headerOrigin;
+  }
+
+  const refererOrigin = normalizeOrigin(req?.headers?.referer);
+  if (isAllowedFrontendOrigin(refererOrigin)) {
+    return refererOrigin;
+  }
+
+  return "";
+}
+
+function getFrontendBaseUrl(req) {
+  const configuredOrigin = normalizeOrigin(FRONTEND_URL);
+  if (configuredOrigin && isAllowedFrontendOrigin(configuredOrigin) && !isLocalOrigin(configuredOrigin)) {
+    return configuredOrigin;
+  }
+
+  const requestOrigin = extractFrontendOriginFromRequest(req);
+  if (requestOrigin && !isLocalOrigin(requestOrigin)) {
+    return requestOrigin;
+  }
+
+  return DEFAULT_FRONTEND_URL;
+}
+
+function getStripeRedirectUrls(req) {
+  const frontendBase = getFrontendBaseUrl(req);
   return {
     // session_id en query real (location.search), no en hash, para asegurar sustitucion de Stripe.
     successUrl: `${frontendBase}/?success=true&session_id={CHECKOUT_SESSION_ID}#/suscripcion`,
@@ -197,7 +266,7 @@ class PaymentController {
       }
 
       // Crear sesion de pago
-      const { successUrl, cancelUrl } = getStripeRedirectUrls();
+      const { successUrl, cancelUrl } = getStripeRedirectUrls(req);
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
         payment_method_types: ["card"],
