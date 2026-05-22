@@ -6,6 +6,15 @@ import { gymService } from "../services/gymService.js";
 import { trainingService } from "../services/trainingService.js";
 import { formatLogDate, repairText, toLocalDateTimeValue } from "./memberHelpers.js";
 
+const sanitizeTrainingError = (err, fallback) => {
+  const msg = String(err?.message || "").trim();
+  if (!msg) return fallback;
+  if (/demasiadas\s+peticiones\s+al\s+servicio\s+de\s+entrenamiento/i.test(msg)) {
+    return fallback;
+  }
+  return msg;
+};
+
 export async function MyReservationsPage() {
   if (!authStore.token) {
     navigate("/login");
@@ -45,7 +54,7 @@ export async function MyReservationsPage() {
       : `<li style="list-style:none; padding:0;">
           <div class="empty-state">
             <div class="empty-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
             </div>
             <p class="empty-title">Sin reservas aquí</p>
             <p class="empty-sub">Explora las clases disponibles y reserva tu próxima sesión.</p>
@@ -123,7 +132,7 @@ export async function MyReservationsPage() {
         paintLogs();
         setLogStatus(`Mostrando ${currentLogs.length} de ${currentLogTotal} entrenamientos.`);
       } catch (err) {
-        setLogStatus(err.message || "No se pudo cargar el historial.", true);
+        setLogStatus(sanitizeTrainingError(err, "No se pudo cargar el historial."), true);
       }
     };
 
@@ -197,8 +206,9 @@ export async function MyReservationsPage() {
         await loadLogs({ page: 1 });
         showToast("Entrenamiento registrado.", "success");
       } catch (err) {
-        setLogStatus(err.message || "No se pudo registrar.", true);
-        showToast(err.message || "Error al registrar.", "error");
+        const safeMessage = sanitizeTrainingError(err, "No se pudo registrar.");
+        setLogStatus(safeMessage, true);
+        showToast(safeMessage, "error");
       } finally {
         if (logSaveBtn) { logSaveBtn.disabled = false; logSaveBtn.textContent = "Registrar"; }
       }

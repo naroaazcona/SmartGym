@@ -46,12 +46,12 @@ const displayMemberName = (member = {}) => {
 };
 
 const AVATAR_PALETTES = [
-  ["#2563eb", "#1e3a8a"],
+  ["#16a34a", "#14532d"],
   ["#10b981", "#064e3b"],
-  ["#6366f1", "#312e81"],
+  ["#fb923c", "#14532d"],
   ["#f59e0b", "#78350f"],
   ["#8b5cf6", "#4c1d95"],
-  ["#0ea5e9", "#0c4a6e"],
+  ["#15803d", "#14532d"],
 ];
 
 const avatarPalette = (id) => AVATAR_PALETTES[Math.abs(Number(id) || 0) % AVATAR_PALETTES.length];
@@ -76,7 +76,7 @@ const prefChips = (value, fallback = "Sin definir") => {
   return items
     .map(
       (item) =>
-        `<span style="display:inline-flex; align-items:center; padding:4px 10px; border-radius:999px; background:rgba(37,99,235,.08); border:1px solid rgba(37,99,235,.18); font-size:12px; font-weight:600; color:#1e3a8a; white-space:nowrap;">${escapeHtml(item)}</span>`
+        `<span style="display:inline-flex; align-items:center; padding:4px 10px; border-radius:999px; background:rgba(22,163,74,.08); border:1px solid rgba(22,163,74,.18); font-size:12px; font-weight:600; color:#14532d; white-space:nowrap;">${escapeHtml(item)}</span>`
     )
     .join("");
 };
@@ -105,7 +105,7 @@ const renderMemberCards = (members = []) => {
         role === "admin"
           ? "rgba(239,68,68,.10); border-color:rgba(239,68,68,.22); color:#991b1b;"
           : role === "trainer"
-          ? "rgba(37,99,235,.10); border-color:rgba(37,99,235,.22); color:#1e3a8a;"
+          ? "rgba(22,163,74,.10); border-color:rgba(22,163,74,.22); color:#14532d;"
           : "rgba(16,185,129,.10); border-color:rgba(16,185,129,.22); color:#065f46;";
 
       const [avatarBg, avatarFg] = avatarPalette(user.id);
@@ -124,8 +124,8 @@ const renderMemberCards = (members = []) => {
         const duration = Number(log?.duration_min || 0);
         return `
           <div style="display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:10px; background:rgba(255,255,255,.85); border:1px solid rgba(24,24,27,.08);">
-            <div style="width:32px; height:32px; border-radius:8px; background:rgba(37,99,235,.08); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-              <svg width="15" height="15" fill="none" stroke="#2563eb" stroke-width="2.2" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            <div style="width:32px; height:32px; border-radius:8px; background:rgba(22,163,74,.08); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <svg width="15" height="15" fill="none" stroke="#16a34a" stroke-width="2.2" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
             </div>
             <div style="flex:1; min-width:0;">
               <div style="font-size:13px; font-weight:500; color:#18181b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${title}</div>
@@ -286,7 +286,7 @@ export async function TrainerUsersPage() {
             card.style.gridColumn = "1 / -1";
             card.style.transform = "";
             card.style.boxShadow = "0 8px 24px rgba(24,24,27,.12)";
-            card.style.borderColor = "rgba(37,99,235,.22)";
+            card.style.borderColor = "rgba(22,163,74,.22)";
             card.dataset.expanded = "1";
             if (chevron) chevron.style.transform = "rotate(180deg)";
             btn.innerHTML = btn.innerHTML.replace(/Ver \d+ sesiones más/, "Ocultar sesiones");

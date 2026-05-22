@@ -6,7 +6,6 @@ const STEPS = [
   {
     id: "goal",
     question: "¿Cuál es tu objetivo principal?",
-    emoji: "🎯",
     type: "single",
     options: [
       { value: "perder_peso", label: "Perder peso", icon: "🔥" },
@@ -20,7 +19,6 @@ const STEPS = [
   {
     id: "experience_level",
     question: "¿Cuál es tu nivel de experiencia?",
-    emoji: "🏋️",
     type: "single",
     options: [
       { value: "beginner", label: "Principiante", desc: "Menos de 6 meses", icon: "🌱" },
@@ -31,7 +29,6 @@ const STEPS = [
   {
     id: "days_per_week",
     question: "¿Cuántos días a la semana quieres entrenar?",
-    emoji: "📅",
     type: "single",
     options: [
       { value: "2", label: "2 días", desc: "Ideal para empezar", icon: "🟢" },
@@ -43,7 +40,6 @@ const STEPS = [
   {
     id: "preferred_training",
     question: "¿Qué tipo de entrenamiento prefieres?",
-    emoji: "⚡",
     type: "multi",
     options: [
       { value: "fuerza", label: "Fuerza", icon: "🏋️" },
@@ -57,7 +53,6 @@ const STEPS = [
   {
     id: "injuries",
     question: "¿Tienes alguna limitación física?",
-    emoji: "🩺",
     type: "multi",
     options: [
       { value: "ninguna", label: "Ninguna", icon: "✅" },
@@ -71,7 +66,6 @@ const STEPS = [
   {
     id: "available_equipment",
     question: "¿Con qué equipamiento cuentas?",
-    emoji: "🏠",
     type: "multi",
     options: [
       { value: "gimnasio_completo", label: "Gimnasio completo", icon: "🏋️" },
@@ -137,7 +131,7 @@ export async function OnboardingPage() {
               : `<div></div>`
             }
             <button class="btn btn-primary" id="ob-next" type="button" ${!hasAnswer(step, current) ? "disabled" : ""}>
-              ${index === STEPS.length - 1 ? "Finalizar 🚀" : "Siguiente →"}
+              ${index === STEPS.length - 1 ? "Finalizar" : "Siguiente →"}
             </button>
           </div>
 
@@ -340,14 +334,14 @@ export async function OnboardingPage() {
 
       .ob-option:hover {
         border-color: var(--accent);
-        background: rgba(255,91,46,.07);
+        background: rgba(22,163,74,.07);
         transform: translateY(-2px);
       }
 
       .ob-option--selected {
         border-color: var(--accent) !important;
-        background: rgba(255,91,46,.12) !important;
-        box-shadow: 0 0 0 3px rgba(255,91,46,.15);
+        background: rgba(22,163,74,.12) !important;
+        box-shadow: 0 0 0 3px rgba(22,163,74,.15);
       }
 
       .ob-option-icon {

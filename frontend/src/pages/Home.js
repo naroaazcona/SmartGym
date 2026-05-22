@@ -63,12 +63,19 @@ export async function HomePage() {
     };
   };
   const fetchWeekClasses = async (startDate) => {
+    const now = new Date();
     const endDate = new Date(startDate.getTime() + 7 * dayMs - 1);
+    const fromDate = startDate > now ? startDate : now;
+    if (fromDate > endDate) return [];
     const res = await gymService.listClasses({
-      from: startDate.toISOString(),
+      from: fromDate.toISOString(),
       to: endDate.toISOString(),
     });
-    return Array.isArray(res) ? res.map(normalizeClass).filter((c) => c.startsAt) : [];
+    return Array.isArray(res)
+      ? res
+          .map(normalizeClass)
+          .filter((c) => c.startsAt && c.startsAt.getTime() > Date.now())
+      : [];
   };
   const buildFallbackClasses = () => {
     const now = new Date();

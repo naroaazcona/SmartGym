@@ -61,6 +61,11 @@ const EXPERIENCE_LEVEL_OPTIONS = [
   { value: "advanced", label: "Avanzado" },
 ];
 
+const REC_LOADING_DATA_NOTICE =
+  "Estamos analizando tus datos de perfil, preferencias y entrenamientos para generar un plan personalizado con IA.";
+const REC_MEDICAL_NOTICE =
+  "Este plan es orientativo y no sustituye la valoracion de un profesional medico. Si tienes lesiones, dolor o alguna condicion clinica, consulta con tu medico o fisioterapeuta antes de seguir las recomendaciones.";
+
 const renderRecommendationClassCard = (item) => {
   const chips = item.exercises.length
     ? `<div class="chip-row" style="margin-top:8px;">${item.exercises
@@ -84,7 +89,7 @@ const renderRecommendationClassCard = (item) => {
 };
 
 const renderRecommendationDietCard = (item) => `
-  <article class="card member-rec-card" style="padding:14px; border-color:rgba(37,99,235,.20); background:linear-gradient(180deg, rgba(37,99,235,.06), rgba(255,255,255,.97)); box-shadow:none; display:flex; flex-direction:column; gap:6px;">
+  <article class="card member-rec-card" style="padding:14px; border-color:rgba(22,163,74,.20); background:linear-gradient(180deg, rgba(22,163,74,.06), rgba(255,255,255,.97)); box-shadow:none; display:flex; flex-direction:column; gap:6px;">
     <div class="kicker">Nutrición</div>
     <div style="font-weight:600; font-size:15px;">${escapeHtml(item.title)}</div>
     <p class="sub" style="margin:0;">${escapeHtml(item.detail || "Sin detalle adicional")}</p>
@@ -179,7 +184,7 @@ const renderTrainingLogs = (logs = []) => {
     return `
       <div class="empty-state">
         <div class="empty-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18"/><path d="M6 11h12"/><path d="M9 15h6"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18"/><path d="M6 11h12"/><path d="M9 15h6"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
         </div>
         <p class="empty-title">Sin entrenamientos registrados</p>
         <p class="empty-sub">Usa el formulario para registrar tu primera sesion.</p>
@@ -246,38 +251,26 @@ export async function MemberAiDashboard() {
   const initialPreferences = normalizeTrainingPreferences(initialPreferencesDoc, recommendationParams);
   const initialDaysNum = Number(initialPreferences.days_per_week || recommendationParams.days || 3);
   const initialDays = Number.isFinite(initialDaysNum) && initialDaysNum > 0 ? Math.round(initialDaysNum) : 3;
-  const initialInjuries = Array.isArray(initialPreferences.injuries)
-    ? initialPreferences.injuries.join(", ")
-    : String(initialPreferences.injuries || recommendationParams.injuries || "ninguna");
-  const initialPreferredTraining = Array.isArray(initialPreferences.preferred_training)
-    ? initialPreferences.preferred_training.join(", ")
-    : String(initialPreferences.preferred_training || "");
-  const initialEquipment = Array.isArray(initialPreferences.available_equipment)
-    ? initialPreferences.available_equipment.join(", ")
-    : String(initialPreferences.available_equipment || "");
-  const initialRecommendationRequest = {
-    ...recommendationParams,
-    level: String(initialPreferences.experience_level || recommendationParams.level || "beginner"),
-    goal: String(initialPreferences.goal || recommendationParams.goal || "mejorar_condicion_fisica"),
-    days: initialDays,
-    injuries: initialInjuries,
-    preferred_training: initialPreferredTraining,
-    available_equipment: initialEquipment,
-  };
-  const initialRecResult = await trainingService
-    .getMyRecommendation(initialRecommendationRequest)
-    .catch(() => ({ recommendation: null, cached: false }));
-  const initialRecDoc = initialRecResult.recommendation;
-  const initialRecPayload = getRecommendationPayload(initialRecDoc);
+  const initialRecDoc = null;
   const initialRecState = {
-    classes: normalizeRecommendedSessions(initialRecPayload, classTypes),
-    diets: normalizeDietRecommendations(initialRecPayload, initialRecommendationRequest.goal),
-    notes: repairText(String(firstFilled(initialRecPayload, ["notes", "note", "advice", "summary", "tips"], "")).trim()),
-    meta: formatRecommendationMeta(initialRecDoc, initialRecResult.cached),
+    classes: [],
+    diets: [],
+    notes: "",
+    meta: "Generando recomendacion IA...",
   };
 
-  const initialRecClassCards = renderRecommendationClasses(initialRecState.classes);
-  const initialRecDietCards = renderRecommendationDiets(initialRecState.diets);
+  const initialRecClassCards = `
+    <div style="padding:14px; border-radius:12px; border:1px solid rgba(22,163,74,.22); background:rgba(220,252,231,.78);">
+      <div class="kicker">Generando plan IA</div>
+      <p class="sub" style="margin:6px 0 0; font-size:15px; line-height:1.6;">Estamos preparando tu recomendacion personalizada.</p>
+    </div>
+  `;
+  const initialRecDietCards = `
+    <div style="padding:14px; border-radius:12px; border:1px solid rgba(16,185,129,.22); background:rgba(236,253,245,.8);">
+      <div class="kicker">Dieta en preparacion</div>
+      <p class="sub" style="margin:6px 0 0; font-size:15px; line-height:1.6;">La propuesta nutricional se cargara junto al plan IA.</p>
+    </div>
+  `;
   const initialRecNotes = initialRecState.notes ? `Nota IA: ${escapeHtml(initialRecState.notes)}` : "";
   const initialLogs = Array.isArray(initialLogsResult?.logs) ? initialLogsResult.logs : [];
   const initialPagination = initialLogsResult?.pagination || {};
@@ -313,6 +306,7 @@ export async function MemberAiDashboard() {
     const recStatusEl = document.querySelector("#member-rec-status");
     const recMetaEl = document.querySelector("#member-rec-meta");
     const recNotesEl = document.querySelector("#member-rec-notes");
+    const recNoticeEl = document.querySelector("#member-rec-notice");
     const recSaveBtn = document.querySelector("#member-rec-save");
     const recRefreshBtn = document.querySelector("#member-rec-refresh");
     const tabBtns = document.querySelectorAll("[data-ia-tab]");
@@ -364,6 +358,19 @@ export async function MemberAiDashboard() {
       recStatusEl.style.color = isError ? "#b42318" : "var(--muted)";
     };
 
+    const setRecNotice = (txt, type = "info") => {
+      if (!recNoticeEl) return;
+      recNoticeEl.textContent = txt;
+      recNoticeEl.style.display = txt ? "block" : "none";
+      recNoticeEl.style.padding = "20px 22px";
+      recNoticeEl.style.fontSize = "22px";
+      recNoticeEl.style.fontWeight = "700";
+      recNoticeEl.style.lineHeight = "1.55";
+      recNoticeEl.style.borderColor = type === "error" ? "rgba(185,28,28,.3)" : "rgba(22,163,74,.24)";
+      recNoticeEl.style.background = type === "error" ? "rgba(254,242,242,.95)" : "rgba(220,252,231,.9)";
+      recNoticeEl.style.color = type === "error" ? "#7f1d1d" : "#14532d";
+    };
+
     const setPrefStatus = (txt, isError = false) => {
       if (!prefStatusEl) return;
       prefStatusEl.textContent = txt;
@@ -407,6 +414,7 @@ export async function MemberAiDashboard() {
       const requestParams = params && typeof params === "object" ? params : buildRecommendationRequestParams();
       const goalForDiet = String(firstFilled(requestParams, ["goal"], recommendationParams.goal) || recommendationParams.goal);
 
+      setRecNotice(`${REC_LOADING_DATA_NOTICE} ${REC_MEDICAL_NOTICE}`);
       setRecStatus(loadingText);
       if (recRefreshBtn) {
         recRefreshBtn.disabled = true;
@@ -431,10 +439,12 @@ export async function MemberAiDashboard() {
               ? "Mostrando recomendacion en cache (vigencia 7 dias)."
               : "Recomendacion IA actualizada.")
         );
+        setRecNotice(REC_MEDICAL_NOTICE);
       } catch (err) {
         if (requestId !== recommendationLoadSeq) return;
         console.error(err);
         setRecStatus(err.message || "No se pudo cargar la recomendacion IA.", true);
+        setRecNotice(`${REC_MEDICAL_NOTICE} Puedes revisar tus preferencias y volver a intentarlo.`, "error");
       } finally {
         if (requestId === recommendationLoadSeq && recRefreshBtn) {
           recRefreshBtn.disabled = false;
@@ -804,6 +814,11 @@ export async function MemberAiDashboard() {
     lastPrefRecSignature = JSON.stringify(buildRecommendationRequestParams(currentPreferences));
     renderLogs();
     setDefaultLogDate();
+    loadRecommendations({
+      params: buildRecommendationRequestParams(currentPreferences),
+      loadingText: "Generando recomendacion IA...",
+      successText: "Recomendacion IA lista para revisar.",
+    }).catch(() => {});
   }, 0);
 
   return `
@@ -843,7 +858,13 @@ export async function MemberAiDashboard() {
                 </div>
               </div>
 
-              <div class="dim" id="member-rec-status">Plan IA listo para revisar.</div>
+              <div class="dim" id="member-rec-status" style="font-size:15px; font-weight:600; line-height:1.5;">Generando recomendacion IA...</div>
+              <div
+                id="member-rec-notice"
+                style="padding:20px 22px; border-radius:12px; border:1px solid rgba(22,163,74,.24); background:rgba(220,252,231,.9); color:#14532d; font-size:22px; font-weight:700; line-height:1.55;"
+              >
+                ${escapeHtml(`${REC_LOADING_DATA_NOTICE} ${REC_MEDICAL_NOTICE}`)}
+              </div>
 
               <div style="display:flex; flex-direction:column; gap:10px;">
                 <div class="kicker">Entrenamientos objetivo</div>
