@@ -84,6 +84,7 @@ export async function TrainerDashboard() {
       minute: "2-digit",
     });
   const renderCard = (cls) => {
+    const mine = isMine(cls);
     const booked = Number(cls.booked_count || 0);
     const capacity = Number(cls.capacity || 0);
     const free = Math.max(capacity - booked, 0);
@@ -105,9 +106,15 @@ export async function TrainerDashboard() {
         </div>
         ${cls.description ? `<p class="sub" style="margin:6px 0; color:#0b0f19;">${cls.description}</p>` : ""}
         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
-          <button class="btn btn-primary" data-action="reservations" data-id="${cls.id}">Reservas</button>
-          <button class="btn btn-ghost" data-action="edit" data-id="${cls.id}">Editar</button>
-          <button class="btn btn-ghost" data-action="delete" data-id="${cls.id}">Eliminar</button>
+          ${
+            mine
+              ? `
+                <button class="btn btn-primary" data-action="reservations" data-id="${cls.id}">Reservas</button>
+                <button class="btn btn-ghost" data-action="edit" data-id="${cls.id}">Editar</button>
+                <button class="btn btn-ghost" data-action="delete" data-id="${cls.id}">Eliminar</button>
+              `
+              : `<span class="dim">Solo lectura: clase asignada a otro entrenador.</span>`
+          }
         </div>
       </article>
     `;
@@ -124,7 +131,7 @@ export async function TrainerDashboard() {
   }
 
   const classes = await gymService.listClasses({ from: initialRange.from, to: initialRange.to }).catch(() => []);
-  const myClasses = classes.filter(isMine);
+  const myClasses = classes;
 
   const typeOptions = classTypes.length
     ? [
@@ -325,10 +332,11 @@ export async function TrainerDashboard() {
       try {
         const params = { from: range.from ?? null, to: range.to ?? null };
         const data = await gymService.listClasses(params);
-        current = data.filter(isMine);
+        current = data;
         renderList(current);
         applyRangeToFilter(range);
-        setStatus(`Mostrando ${current.length} clases (${buildRangeLabel(range)}).`);
+        const mineCount = current.filter(isMine).length;
+        setStatus(`Mostrando ${current.length} clases (${mineCount} asignadas a ti, ${buildRangeLabel(range)}).`);
 
         if (selectedClassId && !current.some((item) => Number(item.id) === Number(selectedClassId))) {
           resetReservations();
@@ -371,6 +379,12 @@ export async function TrainerDashboard() {
       const id = Number(btn.dataset.id);
       const action = btn.dataset.action;
       if (!id) return;
+      const cls = current.find((item) => Number(item.id) === id);
+      if (!cls) return;
+      if (!isMine(cls)) {
+        setStatus("Solo puedes gestionar clases asignadas a tu usuario.", true);
+        return;
+      }
 
       const toggle = (isLoading, label) => {
         btn.disabled = isLoading;
@@ -386,8 +400,6 @@ export async function TrainerDashboard() {
         }
 
         if (action === "edit") {
-          const cls = current.find((item) => Number(item.id) === id);
-          if (!cls) return;
           openEditCard(cls);
           return;
         }
@@ -590,7 +602,8 @@ export async function TrainerDashboard() {
 
     renderList(current);
     applyRangeToFilter(range);
-    setStatus(`Mostrando ${current.length} clases (${buildRangeLabel(range)}).`);
+    const initialMineCount = current.filter(isMine).length;
+    setStatus(`Mostrando ${current.length} clases (${initialMineCount} asignadas a ti, ${buildRangeLabel(range)}).`);
   }, 0);
 
   return `

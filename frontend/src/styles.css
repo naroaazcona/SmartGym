@@ -691,7 +691,8 @@ button{ font:inherit; cursor:pointer; }
   display:flex;
   flex-direction:column;
   gap: 18px;
-  padding: 12px 0 24px;
+  padding-top: 12px;
+  padding-bottom: 24px;
 }
 .home-main > section{
   padding: 12px 0;
@@ -1029,7 +1030,8 @@ textarea{ min-height: 110px; resize: vertical; }
 
 /* TRAINER USERS PAGE */
 .trainer-users-main{
-  padding: 16px 0 32px;
+  padding-top: 16px;
+  padding-bottom: 32px;
 }
 
 .trainer-users-section{
@@ -1412,6 +1414,21 @@ body::after{
 }
 .class-card .backdrop{ opacity:.06; filter:saturate(0.8) grayscale(0.3); }
 .class-card::after{ display:none; }
+
+.home-showcase-card{
+  border-color: rgba(22,163,74,0.24);
+  background: linear-gradient(165deg, #ffffff, #f2fbf5);
+  box-shadow: 0 10px 24px rgba(22,163,74,0.12);
+}
+.home-showcase-title{
+  flex: 1;
+  min-width: 0;
+  font-size: clamp(20px, 2.2vw, 24px);
+  line-height: 1.05;
+  font-weight: 900;
+  letter-spacing: .01em;
+  color: #064e3b;
+}
 
 .feature-card{
   border-radius:12px; border:1px dashed rgba(13,26,45,.12);

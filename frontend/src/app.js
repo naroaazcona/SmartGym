@@ -2,7 +2,7 @@ import { registerRoute, renderRoute, navigate } from "./router.js";
 import { authService } from "./services/authService.js";
 import { apiFetch } from "./api/client.js";
 
-import { HomePage } from "./pages/Home.js";
+import { HomePage } from "./pages/Home.js?v=20260524-f";
 import { LoginPage } from "./pages/Login.js";
 import { OnboardingPage } from "./pages/Onboarding.js";
 import { MemberDashboard } from "./pages/MemberDashboard.js";
@@ -61,3 +61,6 @@ if (_sp.get("success") === "true" || _sp.get("session_id")) {
 
 if (!location.hash) navigate("/");
 renderRoute(); // SOLO una vez
+
+
+

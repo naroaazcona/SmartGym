@@ -65,7 +65,8 @@ services:
       STRIPE_PRICE_BASIC: ${STRIPE_PRICE_BASIC:-}
       STRIPE_PRICE_PREMIUM: ${STRIPE_PRICE_PREMIUM:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
+      FRONTEND_URL: ${FRONTEND_URL:-https://smartgym-app.com}
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://smartgym-app.com,https://www.smartgym-app.com}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
 
   gym-service:
@@ -113,14 +114,14 @@ services:
       AUTH_URL: http://auth-service:3001
       GYM_URL: http://gym-service:3002
       TRAINING_URL: http://training-service:5000
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://smartgym-app.com,https://www.smartgym-app.com}
 
   frontend:
     build: ./frontend
     restart: unless-stopped
     ports:
       - "8080:80"
-    command: ["sh", "-c", "printf '\\033[1;36mSmartGym frontend -> http://localhost:8080\\033[0m\\n' && nginx -g 'daemon off;'"]
+    command: ["sh", "-c", "printf '\\033[1;36mSmartGym frontend -> https://smartgym-app.com\\033[0m\\n' && nginx -g 'daemon off;'"]
 
   pgadmin:
     image: dpage/pgadmin4:latest

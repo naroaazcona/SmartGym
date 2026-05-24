@@ -21,6 +21,13 @@ export async function HomePage() {
     date
       ? date.toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" })
       : "";
+  const toLocalDateKey = (date) => {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return null;
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
   const formatWeekLabel = (start, end) => {
     const sameMonth = start.getMonth() === end.getMonth();
     const startTxt = start.toLocaleDateString("es-ES", { day: "numeric", month: "short" });
@@ -57,7 +64,7 @@ export async function HomePage() {
       startsAt,
       timeLabel: fmtTime(startsAt),
       dateLabel: fmtDay(startsAt),
-      dayKey: startsAt ? startsAt.toISOString().slice(0, 10) : null,
+      dayKey: toLocalDateKey(startsAt),
       slug: (cls.class_type_name || cls.type || "clase").toLowerCase().replace(/\s+/g, "-"),
       image: imgForType(cls.class_type_name || cls.type || ""),
     };
@@ -75,6 +82,20 @@ export async function HomePage() {
       ? res
           .map(normalizeClass)
           .filter((c) => c.startsAt && c.startsAt.getTime() > Date.now())
+      : [];
+  };
+  const fetchUpcomingClasses = async (fromDate = new Date(), daysAhead = 21) => {
+    const start = new Date(fromDate);
+    const end = new Date(start.getTime() + daysAhead * dayMs);
+    const res = await gymService.listClasses({
+      from: start.toISOString(),
+      to: end.toISOString(),
+    });
+    return Array.isArray(res)
+      ? res
+          .map(normalizeClass)
+          .filter((c) => c.startsAt && c.startsAt.getTime() > Date.now())
+          .sort((a, b) => a.startsAt - b.startsAt)
       : [];
   };
   const buildFallbackClasses = () => {
@@ -108,8 +129,10 @@ export async function HomePage() {
 
   /* === Datos en vivo === */
   let weekStart = startOfWeek(new Date());
-  const weekClasses = await fetchWeekClasses(weekStart).catch(() => []);
-  const showcaseClasses = weekClasses.sort((a, b) => a.startsAt - b.startsAt);
+  const [weekClasses, showcaseClasses] = await Promise.all([
+    fetchWeekClasses(weekStart).catch(() => []),
+    fetchUpcomingClasses(new Date(), 21).catch(() => []),
+  ]);
   const hasRealClasses = showcaseClasses.length > 0;
 
   /* === Copys fijos === */
@@ -145,16 +168,18 @@ export async function HomePage() {
   ];
 
   /* === Render helpers === */
-  const classCards = hasRealClasses
-    ? showcaseClasses
-        .slice(0, 8)
-        .map(
-          (c) => `
-          <article class="class-card">
-            <div class="backdrop" style="background-image:url('${c.image}')"></div>
+  const renderShowcaseCards = (items = []) =>
+    items.length
+      ? items
+          .slice()
+          .sort((a, b) => a.startsAt - b.startsAt)
+          .slice(0, 4)
+          .map(
+            (c) => `
+          <article class="class-card home-showcase-card">
             <div class="tag">${c.type}</div>
             <div style="display:flex; justify-content:space-between; gap:8px; align-items:center;">
-              <div style="font-weight:600; font-size:17px;">${c.title}</div>
+              <div class="home-showcase-title">${c.title}</div>
               <span class="badge">${c.booked}/${c.capacity || "?"} reservas</span>
             </div>
             <div class="dim">${c.dateLabel} · ${c.location} · ${c.capacity} plazas</div>
@@ -168,16 +193,18 @@ export async function HomePage() {
               <button class="btn btn-ghost js-go-area">Ver detalles</button>
             </div>
           </article>`
-        )
-        .join("")
-    : `<div class="empty-state" style="width:100%; text-align:center; padding:40px 20px;">
+          )
+          .join("")
+      : `<div class="empty-state" style="width:100%; text-align:center; padding:40px 20px;">
         <p class="empty-title">No hay clases próximas programadas</p>
         <p class="empty-sub">Cuando el equipo añada clases aparecerán aquí con toda la información.</p>
       </div>`;
+  const classCards = renderShowcaseCards(showcaseClasses);
 
   const renderWeekCalendar = (startDate, items = []) => {
     const endDate = new Date(startDate.getTime() + 7 * dayMs - 1);
     const weekLabel = formatWeekLabel(startDate, endDate);
+    const todayKey = toLocalDateKey(new Date());
     const byDay = items.reduce((acc, c) => {
       if (!c.dayKey) return acc;
       acc[c.dayKey] = acc[c.dayKey] || [];
@@ -187,9 +214,9 @@ export async function HomePage() {
 
     const daysHtml = Array.from({ length: 7 }, (_, i) => {
       const day = new Date(startDate.getTime() + i * dayMs);
-      const key = day.toISOString().slice(0, 10);
+      const key = toLocalDateKey(day);
       const dayClasses = (byDay[key] || []).sort((a, b) => a.startsAt - b.startsAt);
-      const isToday = key === new Date().toISOString().slice(0, 10);
+      const isToday = key === todayKey;
       const chips =
         dayClasses.length > 0
           ? dayClasses
@@ -256,6 +283,24 @@ export async function HomePage() {
 
   /* === Listeners diferidos === */
   setTimeout(() => {
+    const availableSubEl = document.querySelector("#home-available-sub");
+    const availableClassesEl = document.querySelector("#home-available-classes");
+
+    const updateAvailableClasses = (weekItems = []) => {
+      const displayItems = Array.isArray(weekItems) && weekItems.length ? weekItems : showcaseClasses;
+      const hasItems = displayItems.length > 0;
+      if (availableSubEl) {
+        availableSubEl.textContent = hasItems
+          ? "Elige viendo la sala, aforo y coach antes de reservar."
+          : "Aun no hay clases programadas proximamente.";
+      }
+      if (availableClassesEl) {
+        availableClassesEl.innerHTML = renderShowcaseCards(displayItems);
+      }
+    };
+
+    updateAvailableClasses(weekClasses);
+
     const goToUserArea = () => {
       const r = authStore.role;
       if (r === "admin") navigate("/admin");
@@ -316,6 +361,7 @@ export async function HomePage() {
         const data = await fetchWeekClasses(currentWeek);
         calendarRoot.innerHTML = renderWeekCalendar(currentWeek, data);
         wireNav();
+        updateAvailableClasses(data);
       } catch (err) {
         calendarRoot.innerHTML = `
           <div class="empty-state">
@@ -336,9 +382,9 @@ export async function HomePage() {
     <div class="screen home-screen">
       ${Navbar()}
 
-      <main class="home-main">
+      <main class="container home-main">
         <section class="hero">
-          <div class="hero-block container">
+          <div class="hero-block">
             <div class="hero-copy">
               <div class="kicker">SmartGym · Real training club</div>
               <h1 class="h1">Clases, aforo en vivo y reservas en un click</h1>
@@ -357,11 +403,11 @@ export async function HomePage() {
           </div>
         </section>
 
-        <section class="container" style="display:flex; flex-direction:column; gap:16px;">
+        <section style="display:flex; flex-direction:column; gap:16px;">
           <div class="panel-card spotlight">
             <h3>Clases disponibles</h3>
-            <p class="sub">${hasRealClasses ? "Elige viendo la sala, aforo y coach antes de reservar." : "Aún no hay clases programadas próximamente."}</p>
-            <div class="class-gallery" style="margin-top:12px;">
+            <p class="sub" id="home-available-sub">${hasRealClasses ? "Elige viendo la sala, aforo y coach antes de reservar." : "Aún no hay clases programadas próximamente."}</p>
+            <div class="class-gallery" id="home-available-classes" style="margin-top:12px;">
               ${classCards}
             </div>
           </div>
@@ -379,3 +425,5 @@ export async function HomePage() {
     </div>
   `;
 }
+
+
